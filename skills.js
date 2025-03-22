@@ -16,7 +16,7 @@
 
     function hck()
      {
-        const l = 
+        const lang = 
         {
      english: {
         badword: ["damn", "fuck", "shit", "bitch", "asshole", "hell", "crap", "bastard", "dick", "piss", "motherfucker", "slut", "whore", "cunt", "cock", "dammit", "pissed off", "screw you", "fucking", "shithead", "prick", "twat", "arse", "bullshit", "douche", "idiot", "moron", "jackass", "shitbag", "bastard", "retard", "screw up", "shitshow", "dipshit", "fuckhead", "dickhead", "asshat", "shitstorm", "asswipe", "fucktard", "tool", "assclown", "shitbird", "cockhead", "pissant", "fuckery", "slutbag", "dickwad", "motherfucking"],
@@ -310,7 +310,7 @@
         let textarea_id='wordInput';
         const inputField = document.getElementById(textarea_id);
 
-        const wordsArray = l['english']['motivation_questions'];
+        const wordsArray = lang['english']['motivation_questions'];
         let delay = 1000;
         
         function addWordWithDelay(index) {
