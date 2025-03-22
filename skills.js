@@ -1,7 +1,8 @@
-
+   let translatedTo='english';
+     
         function MEbutton() {
             const meButton = document.createElement('button');
-            meButton.textContent = 'ME'; 
+            meButton.textContent = translatedTo; 
             meButton.id = 'meButton';   
 
           
@@ -305,19 +306,44 @@
         shy_questions: ["Quelle est la partie la plus difficile d'être timide ?", "Comment surmontes-tu l'anxiété sociale ?", "Quelle est la chose la plus embarrassante qui te soit arrivée à cause de ta timidité ?", "Penses-tu que la timidité est une force ou une faiblesse ?", "Quelle est la meilleure façon d'aborder une personne timide ?", "Comment te sens-tu à propos de parler en public ?", "Quelle est la situation sociale la plus difficile pour toi ?", "Penses-tu que les personnes timides sont mal comprises ?", "Quelle est la meilleure façon de mettre une personne timide à l'aise ?", "Comment te sens-tu à propos des conversations superficielles ?", "Quelle est la chose la plus surprenante à propos de la timidité ?", "Penses-tu que la timidité peut être surmontée ?", "Quelle est la partie la plus gratifiante d'être timide ?", "Comment te sens-tu d'être sous les projecteurs ?", "Quelle est la meilleure façon de renforcer la confiance en soi en tant que personne timide ?"]
     }
         };
-    
+        let kinda_question=["badword",
+                            "greetings",
+                            "compliments",
+                            "questions",
+                            "affirmation",
+                            "surprising",
+                            "slang",
+                            "combined_sentences",
+                            "funny_questions",
+                            "interesting_questions",
+                            "motivation_questions",
+                            "business_questions",
+                            "inspiration_questions",
+                            "creative_questions",
+                            "money_questions",
+                            "interesting_AI_questions",
+                            "embarrassed_questions",
+                            "makingFun_questions",
+                            "religion_questions",
+                            "language_questions",
+                            "date_questions",
+                            "love_questions",
+                            "sex_questions",
+                            "shy_questions"];
 
+        let selected_kinda_question='motivation_questions';
+        let button_target='click01';
         let textarea_id='wordInput';
         const inputField = document.getElementById(textarea_id);
 
-        const wordsArray = lang['english']['motivation_questions'];
+        const wordsArray = lang[translatedTo][selected_kinda_question];
         let delay = 1000;
         
         function addWordWithDelay(index) {
             if (index < wordsArray.length) {
                 inputField.value = "hey lucas,";
                 inputField.value += wordsArray[index] + "\n";
-                document.getElementById('click01').click();
+                document.getElementById(button_target).click();
 
         
                 delay += 5000;
@@ -325,7 +351,7 @@
                 setTimeout(() => {
                     addWordWithDelay(index + 1);
                 }, delay); 
-                /*document.getElementById('click01').click();*/
+                /*document.getElementById(button_target).click();*/
             }
         }
 
