@@ -404,8 +404,8 @@ colloquialExpressions: ["Sì, ce la puoi fare!", "Forza, amico!", "Sei forte!", 
                             "currentEvents_questions",/*[33]*/
                             "colloquialLanguage_questions",/*[34]*/
                             "colloquialExpressions"];/*[35]*/
-
-        let selected_kinda_question=kinda_question[10];
+        index_kindaquestion=10;
+        let selected_kinda_question=kinda_question[index_kindaquestion];
         let button_target='click01';
         let textarea_id='wordInput';
         const inputField = document.getElementById(textarea_id);
@@ -413,9 +413,9 @@ colloquialExpressions: ["Sì, ce la puoi fare!", "Forza, amico!", "Sei forte!", 
         const wordsArray = lang[translatedTo][selected_kinda_question];
         let delay = 1000;
         
-            document.title=kinda_question[10];
+            document.title=kinda_question[index_kindaquestion];
             const newHeading = document.createElement('h1');
-            newHeading.textContent = kinda_question[10];
+            newHeading.textContent = kinda_question[index_kindaquestion];
             document.body.appendChild(newHeading);
         
         function addWordWithDelay(index) {
