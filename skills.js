@@ -9,7 +9,7 @@ let supported_lang=["english",
 "german",
 "korean",
 "french"];
-   let translatedTo='spanish';
+   let translatedTo='english';
      
         function MEbutton() {
             const meButton = document.createElement('button');
