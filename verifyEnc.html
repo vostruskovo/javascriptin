@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Encryption</title>
+</head>
+<body>
+  <h2>Verify Encryption</h2>
+  <input type="file" id="fileInput">
+  <pre id="output"></pre>
+
+  <script>
+    function computeEntropy(bytes) {
+      let counts = new Array(256).fill(0);
+      let total = bytes.length;
+
+      for (let b of bytes) counts[b]++;
+
+      let H = 0;
+      for (let c of counts) {
+        if (c > 0) {
+          let p = c / total;
+          H += -p * Math.log2(p);
+        }
+      }
+      return H.toFixed(4);
+    }
+
+    function analyzeFile(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const arrayBuffer = e.target.result;
+        const bytes = new Uint8Array(arrayBuffer);
+
+        const total = bytes.length;
+        if (total === 0) {
+          document.getElementById("output").textContent = "Empty file";
+          return;
+        }
+
+        // Count printable ASCII (9=TAB, 10=LF, 13=CR, 32–126 printable)
+        let printable = 0;
+        for (let v of bytes) {
+          if (v === 9 || v === 10 || v === 13 || (v >= 32 && v <= 126)) {
+            printable++;
+          }
+        }
+        const ratio = ((printable / total) * 100).toFixed(2);
+
+        // Shannon entropy
+        const entropy = computeEntropy(bytes);
+
+        // Decision logic
+        let out;
+        if (ratio === "100.00") {
+          out = `this file is encrypted #with ${ratio}% printable, entropy=${entropy}#`;
+        } else {
+          out = `this file is not encrypted (printable=${ratio}%, entropy=${entropy})\n` +
+                `⚠️ Backup not created (browsers cannot write files).`;
+        }
+
+        document.getElementById("output").textContent = out;
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    document.getElementById("fileInput").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (file) analyzeFile(file);
+    });
+  </script>
+</body>
+</html>
