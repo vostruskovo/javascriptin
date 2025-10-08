@@ -2,72 +2,501 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Verify Encryption</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Encryption Analyzer</title>
+  <style>
+    :root {
+      --primary: #4361ee;
+      --success: #4cc9f0;
+      --warning: #f72585;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --gray: #6c757d;
+      --border-radius: 8px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: var(--dark);
+      background-color: #f5f7fa;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--success));
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    
+    .content {
+      padding: 30px;
+    }
+    
+    .upload-area {
+      border: 2px dashed #ced4da;
+      border-radius: var(--border-radius);
+      padding: 40px 20px;
+      text-align: center;
+      margin-bottom: 30px;
+      transition: var(--transition);
+      background-color: var(--light);
+      cursor: pointer;
+    }
+    
+    .upload-area:hover {
+      border-color: var(--primary);
+      background-color: rgba(67, 97, 238, 0.05);
+    }
+    
+    .upload-area.highlight {
+      border-color: var(--primary);
+      background-color: rgba(67, 97, 238, 0.1);
+    }
+    
+    .upload-icon {
+      font-size: 48px;
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    
+    .upload-text {
+      margin-bottom: 20px;
+    }
+    
+    .file-input {
+      display: none;
+    }
+    
+    .btn {
+      display: inline-block;
+      background-color: var(--primary);
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    
+    .btn:hover {
+      background-color: #3a56d4;
+      transform: translateY(-2px);
+    }
+    
+    .file-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: var(--light);
+      border-radius: var(--border-radius);
+      display: none;
+    }
+    
+    .analysis-results {
+      margin-top: 30px;
+      display: none;
+    }
+    
+    .result-card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    
+    .result-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .result-icon {
+      font-size: 24px;
+      margin-right: 10px;
+    }
+    
+    .encrypted {
+      color: var(--success);
+    }
+    
+    .not-encrypted {
+      color: var(--warning);
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .metric {
+      text-align: center;
+      padding: 15px;
+      background-color: var(--light);
+      border-radius: var(--border-radius);
+    }
+    
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .metric-label {
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+    
+    .progress-bar {
+      height: 8px;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    
+    .explanation {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(67, 97, 238, 0.05);
+      border-radius: var(--border-radius);
+      border-left: 4px solid var(--primary);
+    }
+    
+    .explanation h3 {
+      margin-bottom: 10px;
+    }
+    
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--gray);
+      font-size: 0.9rem;
+      border-top: 1px solid #e9ecef;
+    }
+    
+    @media (max-width: 600px) {
+      .content {
+        padding: 20px;
+      }
+      
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h2>Verify Encryption</h2>
-  <input type="file" id="fileInput">
-  <pre id="output"></pre>
+  <div class="container">
+    <header>
+      <h1>File Encryption Analyzer</h1>
+      <p class="subtitle">Upload a file to check if it's encrypted</p>
+    </header>
+    
+    <div class="content">
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁</div>
+        <h3 class="upload-text">Drag & Drop your file here</h3>
+        <p>or</p>
+        <button class="btn" id="browseBtn">Browse Files</button>
+        <input type="file" id="fileInput" class="file-input">
+      </div>
+      
+      <div class="file-info" id="fileInfo">
+        <strong>Selected file:</strong> <span id="fileName"></span> (<span id="fileSize"></span>)
+      </div>
+      
+      <div class="analysis-results" id="analysisResults">
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-icon" id="resultIcon">🔒</div>
+            <h2 id="resultTitle">Analysis Result</h2>
+          </div>
+          
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-value" id="entropyValue">0.00</div>
+              <div class="metric-label">Entropy</div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="entropyBar"></div>
+              </div>
+            </div>
+            
+            <div class="metric">
+              <div class="metric-value" id="printableValue">0%</div>
+              <div class="metric-label">Printable Characters</div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="printableBar"></div>
+              </div>
+            </div>
+            
+            <div class="metric">
+              <div class="metric-value" id="compressionValue">0%</div>
+              <div class="metric-label">Compression Ratio</div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="compressionBar"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="explanation">
+            <h3>Analysis Details</h3>
+            <p id="resultExplanation">Upload a file to see the analysis results.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <footer>
+      <p>File Encryption Analyzer &copy; 2023 | All processing happens locally in your browser</p>
+    </footer>
+  </div>
 
   <script>
-    function computeEntropy(bytes) {
-      let counts = new Array(256).fill(0);
-      let total = bytes.length;
-
-      for (let b of bytes) counts[b]++;
-
-      let H = 0;
-      for (let c of counts) {
-        if (c > 0) {
-          let p = c / total;
-          H += -p * Math.log2(p);
+    document.addEventListener('DOMContentLoaded', function() {
+      const uploadArea = document.getElementById('uploadArea');
+      const fileInput = document.getElementById('fileInput');
+      const browseBtn = document.getElementById('browseBtn');
+      const fileInfo = document.getElementById('fileInfo');
+      const fileName = document.getElementById('fileName');
+      const fileSize = document.getElementById('fileSize');
+      const analysisResults = document.getElementById('analysisResults');
+      const resultIcon = document.getElementById('resultIcon');
+      const resultTitle = document.getElementById('resultTitle');
+      const entropyValue = document.getElementById('entropyValue');
+      const printableValue = document.getElementById('printableValue');
+      const compressionValue = document.getElementById('compressionValue');
+      const entropyBar = document.getElementById('entropyBar');
+      const printableBar = document.getElementById('printableBar');
+      const compressionBar = document.getElementById('compressionBar');
+      const resultExplanation = document.getElementById('resultExplanation');
+      
+      // Event listeners for file upload
+      browseBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', handleFileSelect);
+      
+      // Drag and drop functionality
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => uploadArea.classList.add('highlight'), false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('highlight'), false);
+      });
+      
+      uploadArea.addEventListener('drop', handleDrop, false);
+      
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length) {
+          fileInput.files = files;
+          handleFileSelect();
         }
       }
-      return H.toFixed(4);
-    }
-
-    function analyzeFile(file) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const arrayBuffer = e.target.result;
-        const bytes = new Uint8Array(arrayBuffer);
-
-        const total = bytes.length;
-        if (total === 0) {
-          document.getElementById("output").textContent = "Empty file";
-          return;
-        }
-
-        // Count printable ASCII (9=TAB, 10=LF, 13=CR, 32–126 printable)
-        let printable = 0;
-        for (let v of bytes) {
-          if (v === 9 || v === 10 || v === 13 || (v >= 32 && v <= 126)) {
-            printable++;
+      
+      function handleFileSelect() {
+        const file = fileInput.files[0];
+        if (!file) return;
+        
+        // Display file info
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        
+        // Analyze the file
+        analyzeFile(file);
+      }
+      
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+      
+      function analyzeFile(file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const arrayBuffer = e.target.result;
+          const bytes = new Uint8Array(arrayBuffer);
+          const total = bytes.length;
+          
+          if (total === 0) {
+            displayResults(false, "Empty file", 0, 0, 0);
+            return;
+          }
+          
+          // Calculate entropy
+          const entropy = computeEntropy(bytes);
+          
+          // Count printable ASCII characters
+          let printable = 0;
+          for (let v of bytes) {
+            if (v === 9 || v === 10 || v === 13 || (v >= 32 && v <= 126)) {
+              printable++;
+            }
+          }
+          const printableRatio = (printable / total) * 100;
+          
+          // Estimate compression ratio (simplified)
+          const compressionRatio = estimateCompression(bytes);
+          
+          // Determine if file is likely encrypted
+          const isEncrypted = determineEncryption(entropy, printableRatio, compressionRatio);
+          
+          // Display results
+          displayResults(isEncrypted, "", entropy, printableRatio, compressionRatio);
+        };
+        
+        reader.readAsArrayBuffer(file);
+      }
+      
+      function computeEntropy(bytes) {
+        let counts = new Array(256).fill(0);
+        let total = bytes.length;
+        
+        for (let b of bytes) counts[b]++;
+        
+        let H = 0;
+        for (let c of counts) {
+          if (c > 0) {
+            let p = c / total;
+            H += -p * Math.log2(p);
           }
         }
-        const ratio = ((printable / total) * 100).toFixed(2);
-
-        // Shannon entropy
-        const entropy = computeEntropy(bytes);
-
-        // Decision logic
-        let out;
-        if (ratio === "100.00") {
-          out = `this file is encrypted #with ${ratio}% printable, entropy=${entropy}#`;
-        } else {
-          out = `this file is not encrypted (printable=${ratio}%, entropy=${entropy})\n` +
-                `⚠️ Backup not created (browsers cannot write files).`;
+        return H;
+      }
+      
+      function estimateCompression(bytes) {
+        // This is a simplified estimation - real compression would be more complex
+        // We're looking for repeated patterns as a rough indicator
+        let repeatedPatterns = 0;
+        const patternLength = 4;
+        
+        for (let i = 0; i < bytes.length - patternLength; i++) {
+          const pattern = bytes.slice(i, i + patternLength);
+          
+          for (let j = i + patternLength; j < bytes.length - patternLength; j++) {
+            let match = true;
+            for (let k = 0; k < patternLength; k++) {
+              if (bytes[j + k] !== pattern[k]) {
+                match = false;
+                break;
+              }
+            }
+            if (match) {
+              repeatedPatterns++;
+              break;
+            }
+          }
         }
-
-        document.getElementById("output").textContent = out;
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
-
-    document.getElementById("fileInput").addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      if (file) analyzeFile(file);
+        
+        // Calculate a rough compression estimate
+        const maxPossible = Math.floor(bytes.length / patternLength);
+        const compressionEstimate = repeatedPatterns / maxPossible * 100;
+        
+        return Math.min(100, compressionEstimate);
+      }
+      
+      function determineEncryption(entropy, printableRatio, compressionRatio) {
+        // High entropy, low printable characters, and low compression ratio suggest encryption
+        return entropy > 7.5 && printableRatio < 90 && compressionRatio < 30;
+      }
+      
+      function displayResults(isEncrypted, error, entropy, printableRatio, compressionRatio) {
+        analysisResults.style.display = 'block';
+        
+        if (error) {
+          resultIcon.textContent = '❌';
+          resultTitle.textContent = 'Error';
+          resultTitle.className = '';
+          resultExplanation.textContent = error;
+          return;
+        }
+        
+        // Update metric values
+        entropyValue.textContent = entropy.toFixed(4);
+        printableValue.textContent = printableRatio.toFixed(2) + '%';
+        compressionValue.textContent = compressionRatio.toFixed(2) + '%';
+        
+        // Update progress bars
+        entropyBar.style.width = Math.min(entropy / 8 * 100, 100) + '%';
+        printableBar.style.width = printableRatio + '%';
+        compressionBar.style.width = compressionRatio + '%';
+        
+        // Set result based on encryption determination
+        if (isEncrypted) {
+          resultIcon.textContent = '🔒';
+          resultTitle.textContent = 'Likely Encrypted';
+          resultTitle.className = 'encrypted';
+          resultExplanation.textContent = 
+            `This file appears to be encrypted based on its high entropy (${entropy.toFixed(4)}), 
+            low percentage of printable characters (${printableRatio.toFixed(2)}%), and 
+            low compression ratio (${compressionRatio.toFixed(2)}%). These characteristics 
+            are typical of encrypted data.`;
+        } else {
+          resultIcon.textContent = '📄';
+          resultTitle.textContent = 'Likely Not Encrypted';
+          resultTitle.className = 'not-encrypted';
+          resultExplanation.textContent = 
+            `This file does not appear to be encrypted. It has an entropy of ${entropy.toFixed(4)}, 
+            ${printableRatio.toFixed(2)}% printable characters, and a compression ratio of 
+            ${compressionRatio.toFixed(2)}%. These values suggest this is regular, unencrypted data.`;
+        }
+      }
     });
   </script>
 </body>
