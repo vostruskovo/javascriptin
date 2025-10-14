@@ -2089,3 +2089,40 @@ function textArea(c,l,action)
 	"</form>");
 
 }
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Calculates the sum of values from the 'values' array where the corresponding date in the
+'dates' array matches today's date.
+
+This function mimics the behavior of Excel's SOMARPRODUTO formula with a condition:
+(interest!K:K = HOJE()) * (interest!L:L)
+
+Steps:
+1. Converts today's date to ISO format (YYYY-MM-DD) for consistent comparison.
+2. Loops through each item in the 'dates' array.
+3. For each date, checks if it matches today's date.
+4. If it matches, adds the corresponding value from the 'values' array to the total sum.
+5. Returns the final sum of all matching values.
+
+Example:
+dates = ["2025-10-14", "2025-10-13", "2025-10-14"]
+values = [10, 20, 30]
+→ Output: 40 (because only the 1st and 3rd dates match today)
+*/
+
+
+		function somarProduto(dates, values) {
+  const today = new Date().toISOString().slice(0, 10);
+  let sum = 0;
+
+  for (let i = 0; i < dates.length; i++) {
+    const date = new Date(dates[i]).toISOString().slice(0, 10);
+    if (date === today) {
+      sum += values[i];
+    }
+  }
+
+  return sum;
+}
