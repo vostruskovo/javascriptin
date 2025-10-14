@@ -2126,3 +2126,282 @@ values = [10, 20, 30]
 
   return sum;
 }
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Calculates the total sum of all numbers in the input array.
+
+Equivalent to Excel's SOMA function.
+
+Example:
+sum([10, 20, 30]) → 60
+*/
+function sum(arr) {
+  return arr.reduce((acc, val) => acc + val, 0);
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Calculates the average (mean) of all numbers in the input array.
+
+Equivalent to Excel's MÉDIA function.
+
+Example:
+average([10, 20, 30]) → 20
+*/
+function average(arr) {
+  return arr.length ? sum(arr) / arr.length : 0;
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns the highest number in the input array.
+
+Equivalent to Excel's MÁXIMO function.
+
+Example:
+max([10, 20, 30]) → 30
+*/
+function max(arr) {
+  return Math.max(...arr);
+}
+
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns the lowest number in the input array.
+
+Equivalent to Excel's MÍNIMO function.
+
+Example:
+min([10, 20, 30]) → 10
+*/
+function min(arr) {
+  return Math.min(...arr);
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns one value if the condition is true, another if false.
+
+Equivalent to Excel's SE (IF) function.
+
+Example:
+ifCondition(10 > 5, "yes", "no") → "yes"
+*/
+function ifCondition(condition, valueIfTrue, valueIfFalse) {
+  return condition ? valueIfTrue : valueIfFalse;
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Counts how many elements in the array match a given condition.
+
+Equivalent to Excel's CONT.SE function.
+
+Example:
+countIf([1, 2, 3, 2], x => x === 2) → 2
+*/
+function countIf(arr, conditionFn) {
+  return arr.filter(conditionFn).length;
+}
+
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Sums values in the array that match a given condition.
+
+Equivalent to Excel's SOMASE function.
+
+Example:
+sumIf([10, 20, 30], x => x > 15) → 50
+*/
+function sumIf(arr, conditionFn) {
+  return arr.filter(conditionFn).reduce((acc, val) => acc + val, 0);
+}
+
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Multiplies corresponding elements in two arrays and returns the sum of the results.
+
+Equivalent to Excel's SOMARPRODUTO function.
+
+Example:
+sumProduct([1, 2, 3], [4, 5, 6]) → 1×4 + 2×5 + 3×6 = 32
+*/
+function sumProduct(arr1, arr2) {
+  return arr1.reduce((acc, val, i) => acc + val * arr2[i], 0);
+}
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Searches for a value in the first column of a 2D array and returns the value in the same row from another column.
+
+Equivalent to Excel's PROCV (VLOOKUP) function.
+
+Example:
+vlookup("B", [["A", 1], ["B", 2], ["C", 3]], 1) → 2
+*/
+function vlookup(lookupValue, tableArray, colIndex) {
+  for (let row of tableArray) {
+    if (row[0] === lookupValue) {
+      return row[colIndex];
+    }
+  }
+  return null;
+}
+
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns today's date in YYYY-MM-DD format.
+
+Equivalent to Excel's HOJE function.
+
+Example:
+today() → "2025-10-14"
+*/
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns the value at a specific position in an array.
+
+Equivalent to Excel's ÍNDICE (INDEX) function.
+
+Example:
+index([10, 20, 30], 2) → 20
+*/
+function index(arr, position) {
+  return arr[position - 1]; // Excel is 1-based, JS is 0-based
+}
+
+/*-------------------------------------------------------------------------------------------0
+Returns the position of a value in an array.
+
+Equivalent to Excel's CORRESP (MATCH) function.
+
+Example:
+match(20, [10, 20, 30]) → 2
+*/
+function match(value, arr) {
+  return arr.indexOf(value) + 1; // Excel is 1-based
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Joins multiple strings into one.
+
+Equivalent to Excel's CONCATENAR (CONCATENATE) function.
+
+Example:
+concatText("Hello", " ", "World") → "Hello World"
+*/
+function concatText(...args) {
+  return args.join('');
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Formats a date object into a custom string format.
+
+Equivalent to Excel's TEXTO function for dates.
+
+Example:
+formatDate(new Date(), "DD/MM/YYYY") → "14/10/2025"
+*/
+function formatDate(date, format) {
+  const d = new Date(date);
+  const pad = n => n.toString().padStart(2, '0');
+
+  return format
+    .replace("DD", pad(d.getDate()))
+    .replace("MM", pad(d.getMonth() + 1))
+    .replace("YYYY", d.getFullYear());
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Rounds a number to a specified number of decimal places.
+
+Equivalent to Excel's ARRED (ROUND) function.
+
+Example:
+round(3.14159, 2) → 3.14
+*/
+function round(num, decimals) {
+  const factor = Math.pow(10, decimals);
+  return Math.round(num * factor) / factor;
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns true if all conditions are true.
+
+Equivalent to Excel's E (AND) function.
+
+Example:
+andCondition(true, true, false) → false
+*/
+function andCondition(...conditions) {
+  return conditions.every(Boolean);
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns true if at least one condition is true.
+
+Equivalent to Excel's OU (OR) function.
+
+Example:
+orCondition(false, false, true) → true
+*/
+function orCondition(...conditions) {
+  return conditions.some(Boolean);
+}
+
+
+/*-------------------------------------------------------------------------------------------0
+Returns the opposite of a boolean value.
+
+Equivalent to Excel's NÃO (NOT) function.
+
+Example:
+notCondition(true) → false
+*/
+function notCondition(value) {
+  return !value;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
