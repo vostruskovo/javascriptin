@@ -83,26 +83,31 @@ function identifyCssParamType(...args) {
 
 
 
-function checkLoadedFiles(jsFiles = [], cssFiles = []) {
+
+
+
+
+function checkLoadedFiles(Files = []) {
   let results = [];
 
-  // Check JS files
-  jsFiles.forEach(file => {
-    let scripts = document.querySelectorAll(`script[src*="${file}"]`);
-    if (scripts.length > 0) {
-      results.push(`JS loaded: ${file}`);
+  Files.forEach(file => {
+    // Detect type by extension
+    if (file.endsWith(".js")) {
+      let scripts = document.querySelectorAll(`script[src*="${file}"]`);
+      if (scripts.length > 0) {
+        results.push(`JS loaded: ${file}`);
+      } else {
+        results.push(`JS NOT loaded: ${file}`);
+      }
+    } else if (file.endsWith(".css")) {
+      let links = document.querySelectorAll(`link[href*="${file}"]`);
+      if (links.length > 0) {
+        results.push(`CSS loaded: ${file}`);
+      } else {
+        results.push(`CSS NOT loaded: ${file}`);
+      }
     } else {
-      results.push(`JS NOT loaded: ${file}`);
-    }
-  });
-
-  // Check CSS files
-  cssFiles.forEach(file => {
-    let links = document.querySelectorAll(`link[href*="${file}"]`);
-    if (links.length > 0) {
-      results.push(`CSS loaded: ${file}`);
-    } else {
-      results.push(`CSS NOT loaded: ${file}`);
+      results.push(`Unknown type: ${file}`);
     }
   });
 
