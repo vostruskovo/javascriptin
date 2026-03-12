@@ -83,34 +83,114 @@ function identifyCssParamType(...args) {
 
 
 
+function checkLoadedFiles(...args) {
+  let results = {
+    js: [],
+    css: [],
+    invalid: [],
+    unknown: []
+  };
+  let Files = [];
 
-
-
-
-function checkLoadedFiles(Files = []) {
-  let results = [];
-
-  Files.forEach(file => {
-    // Detect type by extension
-    if (file.endsWith(".js")) {
-      let scripts = document.querySelectorAll(`script[src*="${file}"]`);
-      if (scripts.length > 0) {
-        results.push(`JS loaded: ${file}`);
-      } else {
-        results.push(`JS NOT loaded: ${file}`);
-      }
-    } else if (file.endsWith(".css")) {
-      let links = document.querySelectorAll(`link[href*="${file}"]`);
-      if (links.length > 0) {
-        results.push(`CSS loaded: ${file}`);
-      } else {
-        results.push(`CSS NOT loaded: ${file}`);
-      }
+  // Flatten arguments: handle arrays and strings
+  args.forEach(arg => {
+    if (Array.isArray(arg)) {
+      Files.push(...arg);
+    } else if (typeof arg === "string") {
+      Files.push(arg);
     } else {
-      results.push(`Unknown type: ${file}`);
+      results.invalid.push(`Invalid input: ${arg}`);
     }
   });
 
-  // Show popup with results
-  alert(results.join("\n"));
+  // Deduplicate
+  Files = [...new Set(Files)];
+
+  Files.forEach(file => {
+    if (file.endsWith(".js")) {
+      let scripts = document.querySelectorAll(`script[src*="${file}"]`);
+      results.js.push(scripts.length > 0 ? `JS loaded: ${file}` : `JS NOT loaded: ${file}`);
+    } else if (file.endsWith(".css")) {
+      let links = document.querySelectorAll(`link[href*="${file}"]`);
+      results.css.push(links.length > 0 ? `CSS loaded: ${file}` : `CSS NOT loaded: ${file}`);
+    } else {
+      results.unknown.push(`Unknown type: ${file}`);
+    }
+  });
+
+  // Build organized output
+  let output = [];
+  if (results.js.length) {
+    output.push("JS Files:\n" + results.js.join("\n"));
+  }
+  if (results.css.length) {
+    output.push("CSS Files:\n" + results.css.join("\n"));
+  }
+  if (results.invalid.length) {
+    output.push("Invalid Inputs:\n" + results.invalid.join("\n"));
+  }
+  if (results.unknown.length) {
+    output.push("Unknown Types:\n" + results.unknown.join("\n"));
+  }
+
+  alert(output.join("\n\n"));
 }
+
+
+
+/*
+function checkLoadedFilesPyPhp(...args) {
+  let results = {
+    js: [],
+    css: [],
+    php: [],
+    py: [],
+    invalid: [],
+    unknown: []
+  };
+  let Files = [];
+
+  // Flatten arguments: handle arrays and strings
+  args.forEach(arg => {
+    if (Array.isArray(arg)) {
+      Files.push(...arg);
+    } else if (typeof arg === "string") {
+      Files.push(arg);
+    } else {
+      results.invalid.push(`Invalid input: ${arg}`);
+    }
+  });
+
+  // Deduplicate
+  Files = [...new Set(Files)];
+
+  Files.forEach(file => {
+    if (file.endsWith(".js")) {
+      let scripts = document.querySelectorAll(`script[src*="${file}"]`);
+      results.js.push(scripts.length > 0 ? `JS loaded: ${file}` : `JS NOT loaded: ${file}`);
+    } else if (file.endsWith(".css")) {
+      let links = document.querySelectorAll(`link[href*="${file}"]`);
+      results.css.push(links.length > 0 ? `CSS loaded: ${file}` : `CSS NOT loaded: ${file}`);
+    } else if (file.endsWith(".php")) {
+      // PHP files aren’t loaded in the DOM, so just mark them
+      results.php.push(`PHP file referenced: ${file}`);
+    } else if (file.endsWith(".py")) {
+      // Same for Python
+      results.py.push(`Python file referenced: ${file}`);
+    } else {
+      results.unknown.push(`Unknown type: ${file}`);
+    }
+  });
+
+  // Build organized output
+  let output = [];
+  if (results.js.length) output.push("JS Files:\n" + results.js.join("\n"));
+  if (results.css.length) output.push("CSS Files:\n" + results.css.join("\n"));
+  if (results.php.length) output.push("PHP Files:\n" + results.php.join("\n"));
+  if (results.py.length) output.push("Python Files:\n" + results.py.join("\n"));
+  if (results.invalid.length) output.push("Invalid Inputs:\n" + results.invalid.join("\n"));
+  if (results.unknown.length) output.push("Unknown Types:\n" + results.unknown.join("\n"));
+
+  alert(output.join("\n\n"));
+}
+*/
