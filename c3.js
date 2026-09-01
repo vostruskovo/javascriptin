@@ -1,5 +1,8 @@
 /*
 ⚙️ How It Works
+// ⚠️ c.js, c1.js, c2.js and c3.js are alternate experiments — see the
+// note at the top of c2.js. This file (c3.js) is Node.js-only: scanf()
+// calls require('readline'), which does not exist in browsers.
 
 printf: prints formatted text (supports %s, %d, %f)
 

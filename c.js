@@ -6,13 +6,19 @@
 */
 
 const toFixed = (n, fixed) => `${n}`.match(new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`))[0];
-precision = function(n, fixed) {
+
+// NOTE: previously these were undeclared bare assignments (`precision = ...`),
+// which leaked as implicit globals and collided with the unrelated, more
+// complete `precision()` function exported by math.js when both files are
+// loaded on the same page. Renamed + properly declared to avoid that clash;
+// kept as two functions since printf_() below calls cPrecision specifically.
+const cPrecision = function(n, fixed) {
   let re = new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`);
   let p = `${n}`.match(re);
   return p;
 }
 
-precisionn = (n, fixed) => {
+const cPrecisionn = (n, fixed) => {
   let re = new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`);
   let p = `${n}`.match(re);
   return p;
@@ -106,24 +112,24 @@ function printf_(...string) {
           string[0] = string[0].replace("%c", String.fromCharCode(string[i]));
           string[0] = string[0].replace("%d", parseInt(string[i]));
           string[0] = string[0].replace("%f", string[i].toFixed(2))
-            .replace("%.1f", precision(string[i], 1))
-            .replace("%.2f", precision(string[i], 2))
-            .replace("%.3f", precision(string[i], 3))
-            .replace("%.4f", precision(string[i], 4))
-            .replace("%.5f", precision(string[i], 5))
-            .replace("%.6f", precision(string[i], 6))
-            .replace("%.7f", precision(string[i], 7))
-            .replace("%.8f", precision(string[i], 8))
-            .replace("%.9f", precision(string[i], 9))
-            .replace("%1f", precision(string[i], 1))
-            .replace("%2f", precision(string[i], 2))
-            .replace("%3f", precision(string[i], 3))
-            .replace("%4f", precision(string[i], 4))
-            .replace("%5f", precision(string[i], 5))
-            .replace("%6f", precision(string[i], 6))
-            .replace("%7f", precision(string[i], 7))
-            .replace("%8f", precision(string[i], 8))
-            .replace("%9f", precision(string[i], 9))
+            .replace("%.1f", cPrecision(string[i], 1))
+            .replace("%.2f", cPrecision(string[i], 2))
+            .replace("%.3f", cPrecision(string[i], 3))
+            .replace("%.4f", cPrecision(string[i], 4))
+            .replace("%.5f", cPrecision(string[i], 5))
+            .replace("%.6f", cPrecision(string[i], 6))
+            .replace("%.7f", cPrecision(string[i], 7))
+            .replace("%.8f", cPrecision(string[i], 8))
+            .replace("%.9f", cPrecision(string[i], 9))
+            .replace("%1f", cPrecision(string[i], 1))
+            .replace("%2f", cPrecision(string[i], 2))
+            .replace("%3f", cPrecision(string[i], 3))
+            .replace("%4f", cPrecision(string[i], 4))
+            .replace("%5f", cPrecision(string[i], 5))
+            .replace("%6f", cPrecision(string[i], 6))
+            .replace("%7f", cPrecision(string[i], 7))
+            .replace("%8f", cPrecision(string[i], 8))
+            .replace("%9f", cPrecision(string[i], 9))
             .replace("\n", "<br>");
           break;
       }

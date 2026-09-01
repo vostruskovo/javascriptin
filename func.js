@@ -26,9 +26,9 @@ function bubbleSort(array)
 {
   let temp=""; 
   
-  for(i=0;i<array.length;i++)
+  for(let i=0;i<array.length;i++)
   {
-    for(j=0;j<array.length;j++)
+    for(let j=0;j<array.length;j++)
     {
       if(array[j]>array[i])
       {
@@ -67,9 +67,10 @@ ar02=[e,f,d,c,a,b];
 function keepArrayFromBubbleSort(array)
 {
 	let arrayCopy=[...array];
-	for(i=0;i<array.length;i++)
+	let temp="";
+	for(let i=0;i<array.length;i++)
   {
-    for(j=0;j<array.length;j++)
+    for(let j=0;j<array.length;j++)
     {
       if(array[j]>array[i])
       {
@@ -109,9 +110,10 @@ function bubbleSortFrom(array)
 {
 	let arrayCopy=[...array];
 	let arrayBCK=[...array];
-	for(i=0;i<array.length;i++)
+	let temp="";
+	for(let i=0;i<array.length;i++)
   {
-    for(j=0;j<arrayBCK.length;j++)
+    for(let j=0;j<arrayBCK.length;j++)
     {
       if(arrayBCK[j]>arrayBCK[i])
       {
@@ -151,9 +153,9 @@ function backBubleSort(array)
 {
   let temp=""; 
   
-  for(i=0;i<array.length;i++)
+  for(let i=0;i<array.length;i++)
   {
-    for(j=0;j<array.length;j++)
+    for(let j=0;j<array.length;j++)
     {
       if(array[j]<array[i])
       {

@@ -1,6 +1,15 @@
 /* ===============================================
    C Standard Library for JavaScript (Browser)
    =============================================== */
+// ⚠️ c.js, c1.js, c2.js and c3.js are alternate experiments covering the
+// same ground (printf, scanf, time, math, string helpers) and ALL declare
+// bare global functions with the same names (printf, time, clock, strlen...).
+// Loading more than one of these files on the same page will silently
+// clobber whichever loaded first. Pick exactly one:
+//   c1.js — the most complete: browser stdio + struct/enum + header system
+//   c2.js — this file: a simpler flat browser version
+//   c3.js — Node.js-only (uses require('readline') for scanf)
+//   c.js  — unrelated helper set (printf-style console/DOM formatting)
 
 // ----- Reference (Pointer Simulation) -----
 function Ref(value) {

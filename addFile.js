@@ -1,196 +1,120 @@
-var path="./frontend/src/";
+/**
+ * @file Dynamic JS/CSS file loader
+ * @description Loads script/stylesheet files relative to a base path, without document.write
+ *              (document.write breaks the page if called after load, so this uses
+ *              createElement + appendChild instead — safe to call anytime).
+ * @version 2.0.0 (revised)
+ */
 
+const fileLoaderConfig = {
+	basePath: "./frontend/src/"
+};
 
+/**
+ * Append a single <script> tag pointing to basePath + "js/" + file.
+ * @param {string} file
+ * @returns {HTMLScriptElement}
+ */
 function addJs(file) {
-    let path=this.path+"js/";
-    document.writeln(`<script type='text/javascript' src='${path}${file}'></script>`);
-  }
+	const script = document.createElement('script');
+	script.type = 'text/javascript';
+	script.src = fileLoaderConfig.basePath + "js/" + file;
+	document.head.appendChild(script);
+	return script;
+}
 
-  function addCss(file) {
-    let path=this.path+"css/";
-    document.writeln(`<link rel="stylesheet" href=${path}${file}>`);
-  }
+/**
+ * Append a single <link rel="stylesheet"> tag pointing to basePath + "css/" + file.
+ * @param {string} file
+ * @returns {HTMLLinkElement}
+ */
+function addCss(file) {
+	const link = document.createElement('link');
+	link.rel = 'stylesheet';
+	link.href = fileLoaderConfig.basePath + "css/" + file;
+	document.head.appendChild(link);
+	return link;
+}
 
+/**
+ * Flatten arbitrary arguments (strings, arrays, or an object of strings) into
+ * a single flat array of filenames — used by identifyJsParamType/identifyCssParamType.
+ * @param {...*} args
+ * @returns {string[]}
+ */
+function flattenFileArgs(args) {
+	const files = [];
 
+	args.forEach(arg => {
+		if (Array.isArray(arg)) {
+			files.push(...arg);
+		} else if (arg && typeof arg === 'object') {
+			files.push(...Object.values(arg));
+		} else if (typeof arg === 'string') {
+			files.push(arg);
+		}
+	});
+
+	return files;
+}
+
+/**
+ * Load one or more JS files, accepting a single filename, multiple filenames,
+ * an array of filenames, or an object whose values are filenames.
+ * @param {...*} args
+ * @returns {HTMLScriptElement[]}
+ */
 function identifyJsParamType(...args) {
-  let path = this.path + "js/";
-
-  // Single parameter
-  if (args.length === 1) {
-    const arg = args[0];
-    document.write(`<script type="text/javascript" src="${path}${arg}"><\/script>`);
-  } 
-  // Multiple parameters
-  else if (args.length > 1) {
-    for (let i = 0; i < args.length; ++i) {
-      document.write(`<script type="text/javascript" src="${path}${args[i]}"><\/script>`);
-    }
-  }
-
-  const param = args[0];
-
-  // Array case
-  if (Array.isArray(param)) {
-    param.forEach(src => {
-//      if (typeof src === "string") {
-        document.write(`<script type="text/javascript" src="${path}${src}"><\/script>`);
-  //    }
-    });
-  }
-
-  // Object case
-  if (typeof param === "object") {
-    for (let key in param) {
-      document.write(`<script type="text/javascript" src="${path}${param[key]}"><\/script>`);
-    }
-  }
-  
+	return flattenFileArgs(args).map(addJs);
 }
 
-
-
+/**
+ * Load one or more CSS files. Same accepted shapes as identifyJsParamType.
+ * @param {...*} args
+ * @returns {HTMLLinkElement[]}
+ */
 function identifyCssParamType(...args) {
-  let path = this.path + "css/";
-
-  // Single parameter
-  if (args.length === 1) {
-    const arg = args[0];
-    document.write(`<link rel="stylesheet" type="text/css" href="${path}${arg}">`);
-  } 
-  // Multiple parameters
-  else if (args.length > 1) {
-    for (let i = 0; i < args.length; ++i) {
-      document.write(`<link rel="stylesheet" type="text/css" href="${path}${args[i]}">`);
-    }
-  }
-
-  const param = args[0];
-
-  // Array case
-  if (Array.isArray(param)) {
-    param.forEach(src => {
-      document.write(`<link rel="stylesheet" type="text/css" href="${path}${src}">`);
-    });
-  }
-
-  // Object case
-  if (typeof param === "object") {
-    for (let key in param) {
-      document.write(`<link rel="stylesheet" type="text/css" href="${path}${param[key]}">`);
-    }
-  }
+	return flattenFileArgs(args).map(addCss);
 }
 
-
-
+/**
+ * Check whether the given JS/CSS files are already present in the document,
+ * and alert() a readable summary. Accepts strings and/or arrays of strings.
+ * @param {...*} args
+ */
 function checkLoadedFiles(...args) {
-  let results = {
-    js: [],
-    css: [],
-    invalid: [],
-    unknown: []
-  };
-  let Files = [];
+	const results = { js: [], css: [], invalid: [], unknown: [] };
+	let files = [];
 
-  // Flatten arguments: handle arrays and strings
-  args.forEach(arg => {
-    if (Array.isArray(arg)) {
-      Files.push(...arg);
-    } else if (typeof arg === "string") {
-      Files.push(arg);
-    } else {
-      results.invalid.push(`Invalid input: ${arg}`);
-    }
-  });
+	args.forEach(arg => {
+		if (Array.isArray(arg)) {
+			files.push(...arg);
+		} else if (typeof arg === "string") {
+			files.push(arg);
+		} else {
+			results.invalid.push(`Invalid input: ${arg}`);
+		}
+	});
 
-  // Deduplicate
-  Files = [...new Set(Files)];
+	files = [...new Set(files)];
 
-  Files.forEach(file => {
-    if (file.endsWith(".js")) {
-      let scripts = document.querySelectorAll(`script[src*="${file}"]`);
-      results.js.push(scripts.length > 0 ? `JS loaded: ${file}` : `JS NOT loaded: ${file}`);
-    } else if (file.endsWith(".css")) {
-      let links = document.querySelectorAll(`link[href*="${file}"]`);
-      results.css.push(links.length > 0 ? `CSS loaded: ${file}` : `CSS NOT loaded: ${file}`);
-    } else {
-      results.unknown.push(`Unknown type: ${file}`);
-    }
-  });
+	files.forEach(file => {
+		if (file.endsWith(".js")) {
+			const scripts = document.querySelectorAll(`script[src*="${file}"]`);
+			results.js.push(scripts.length > 0 ? `JS loaded: ${file}` : `JS NOT loaded: ${file}`);
+		} else if (file.endsWith(".css")) {
+			const links = document.querySelectorAll(`link[href*="${file}"]`);
+			results.css.push(links.length > 0 ? `CSS loaded: ${file}` : `CSS NOT loaded: ${file}`);
+		} else {
+			results.unknown.push(`Unknown type: ${file}`);
+		}
+	});
 
-  // Build organized output
-  let output = [];
-  if (results.js.length) {
-    output.push("JS Files:\n" + results.js.join("\n"));
-  }
-  if (results.css.length) {
-    output.push("CSS Files:\n" + results.css.join("\n"));
-  }
-  if (results.invalid.length) {
-    output.push("Invalid Inputs:\n" + results.invalid.join("\n"));
-  }
-  if (results.unknown.length) {
-    output.push("Unknown Types:\n" + results.unknown.join("\n"));
-  }
+	const output = [];
+	if (results.js.length) output.push("JS Files:\n" + results.js.join("\n"));
+	if (results.css.length) output.push("CSS Files:\n" + results.css.join("\n"));
+	if (results.invalid.length) output.push("Invalid Inputs:\n" + results.invalid.join("\n"));
+	if (results.unknown.length) output.push("Unknown Types:\n" + results.unknown.join("\n"));
 
-  alert(output.join("\n\n"));
+	alert(output.join("\n\n"));
 }
-
-
-
-/*
-function checkLoadedFilesPyPhp(...args) {
-  let results = {
-    js: [],
-    css: [],
-    php: [],
-    py: [],
-    invalid: [],
-    unknown: []
-  };
-  let Files = [];
-
-  // Flatten arguments: handle arrays and strings
-  args.forEach(arg => {
-    if (Array.isArray(arg)) {
-      Files.push(...arg);
-    } else if (typeof arg === "string") {
-      Files.push(arg);
-    } else {
-      results.invalid.push(`Invalid input: ${arg}`);
-    }
-  });
-
-  // Deduplicate
-  Files = [...new Set(Files)];
-
-  Files.forEach(file => {
-    if (file.endsWith(".js")) {
-      let scripts = document.querySelectorAll(`script[src*="${file}"]`);
-      results.js.push(scripts.length > 0 ? `JS loaded: ${file}` : `JS NOT loaded: ${file}`);
-    } else if (file.endsWith(".css")) {
-      let links = document.querySelectorAll(`link[href*="${file}"]`);
-      results.css.push(links.length > 0 ? `CSS loaded: ${file}` : `CSS NOT loaded: ${file}`);
-    } else if (file.endsWith(".php")) {
-      // PHP files aren’t loaded in the DOM, so just mark them
-      results.php.push(`PHP file referenced: ${file}`);
-    } else if (file.endsWith(".py")) {
-      // Same for Python
-      results.py.push(`Python file referenced: ${file}`);
-    } else {
-      results.unknown.push(`Unknown type: ${file}`);
-    }
-  });
-
-  // Build organized output
-  let output = [];
-  if (results.js.length) output.push("JS Files:\n" + results.js.join("\n"));
-  if (results.css.length) output.push("CSS Files:\n" + results.css.join("\n"));
-  if (results.php.length) output.push("PHP Files:\n" + results.php.join("\n"));
-  if (results.py.length) output.push("Python Files:\n" + results.py.join("\n"));
-  if (results.invalid.length) output.push("Invalid Inputs:\n" + results.invalid.join("\n"));
-  if (results.unknown.length) output.push("Unknown Types:\n" + results.unknown.join("\n"));
-
-  alert(output.join("\n\n"));
-}
-*/

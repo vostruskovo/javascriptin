@@ -58,7 +58,9 @@ class FormGenerator {
     }
 
     /**
-     * Internal form creation method
+     * Internal form creation method.
+     * Builds the form as real DOM (not document.write, which destroys the
+     * page if called after load) and appends it to options.container or document.body.
      */
     _createForm(phpFile, method, formType, options) {
         const formId = this.generateFormId();
@@ -104,15 +106,94 @@ class FormGenerator {
                     
                     ${options.extraButtons || ''}
                 </div>
-                
-                ${this._createFormValidationScript(formId, fields)}
             </form>
-            
-            ${this._injectFormStyles()}
         `;
 
-        document.write(formHTML);
+        this._injectFormStyles();
+
+        const container = options.container instanceof Element ? options.container : document.body;
+        container.insertAdjacentHTML('beforeend', formHTML);
+
+        this._attachValidation(formId);
+
+        const form = document.getElementById(formId);
+        form?.querySelectorAll('[data-action="clear-form"]').forEach(btn => {
+            btn.addEventListener('click', () => this.clearForm(formId));
+        });
+
         return formId;
+    }
+
+    /**
+     * Attach client-side validation directly (replaces the old injected
+     * <script> string, whose "this" pointed at the form element, not
+     * at FormGenerator, and silently threw on submit).
+     */
+    _attachValidation(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        form.addEventListener('submit', (e) => {
+            let isValid = true;
+            const errors = [];
+
+            const passwordField = form.querySelector('input[name="password"]');
+            const confirmPasswordField = form.querySelector('input[name="confirmPassword"]');
+            if (passwordField && confirmPasswordField) {
+                if (passwordField.value !== confirmPasswordField.value) {
+                    isValid = false;
+                    errors.push('Passwords do not match');
+                    confirmPasswordField.classList.add('error');
+                } else {
+                    confirmPasswordField.classList.remove('error');
+                }
+            }
+
+            const emailField = form.querySelector('input[type="email"]');
+            if (emailField && !this._validateEmail(emailField.value)) {
+                isValid = false;
+                errors.push('Please enter a valid email address');
+                emailField.classList.add('error');
+            } else if (emailField) {
+                emailField.classList.remove('error');
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                this._showFormErrors(formId, errors);
+            }
+        });
+    }
+
+    /**
+     * Email validation helper.
+     * @param {string} emailValue
+     * @returns {boolean}
+     */
+    _validateEmail(emailValue) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(emailValue);
+    }
+
+    /**
+     * Render validation errors inside the form.
+     * @param {string} formId
+     * @param {string[]} errors
+     */
+    _showFormErrors(formId, errors) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        let errorContainer = form.querySelector('.form-errors');
+        if (!errorContainer) {
+            errorContainer = document.createElement('div');
+            errorContainer.className = 'form-errors';
+            form.querySelector('.form-header')?.after(errorContainer);
+        }
+
+        errorContainer.innerHTML = errors.map(error =>
+            `<div class="error-message">${error}</div>`
+        ).join('');
     }
 
     /**
@@ -166,7 +247,7 @@ class FormGenerator {
                 }
             ],
             extraButtons: `
-                <button type="button" class="btn btn-link" onclick="formGenerator.clearForm('${this.generateFormId()}')">
+                <button type="button" class="btn btn-link" data-action="clear-form">
                     Clear Form
                 </button>
             `
@@ -194,75 +275,13 @@ class FormGenerator {
     }
 
     /**
-     * Create form validation script
-     */
-    _createFormValidationScript(formId, fields) {
-        return `
-            <script>
-                document.getElementById('${formId}').addEventListener('submit', function(e) {
-                    const form = this;
-                    let isValid = true;
-                    const errors = [];
-                    
-                    // Password confirmation validation
-                    const passwordField = form.querySelector('input[name="password"]');
-                    const confirmPasswordField = form.querySelector('input[name="confirmPassword"]');
-                    
-                    if (passwordField && confirmPasswordField) {
-                        if (passwordField.value !== confirmPasswordField.value) {
-                            isValid = false;
-                            errors.push('Passwords do not match');
-                            confirmPasswordField.classList.add('error');
-                        } else {
-                            confirmPasswordField.classList.remove('error');
-                        }
-                    }
-                    
-                    // Email validation
-                    const emailField = form.querySelector('input[type="email"]');
-                    if (emailField && !this._validateEmail(emailField.value)) {
-                        isValid = false;
-                        errors.push('Please enter a valid email address');
-                        emailField.classList.add('error');
-                    } else if (emailField) {
-                        emailField.classList.remove('error');
-                    }
-                    
-                    if (!isValid) {
-                        e.preventDefault();
-                        this._showFormErrors('${formId}', errors);
-                    }
-                });
-                
-                // Email validation helper
-                function _validateEmail(email) {
-                    const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-                    return re.test(email);
-                }
-                
-                // Error display helper
-                function _showFormErrors(formId, errors) {
-                    let errorContainer = document.querySelector('#${formId} .form-errors');
-                    if (!errorContainer) {
-                        errorContainer = document.createElement('div');
-                        errorContainer.className = 'form-errors';
-                        document.querySelector('#${formId} .form-header').after(errorContainer);
-                    }
-                    
-                    errorContainer.innerHTML = errors.map(error => 
-                        '<div class="error-message">' + error + '</div>'
-                    ).join('');
-                }
-            </script>
-        `;
-    }
-
-    /**
-     * Inject form styles
+     * Inject form styles into <head> once (idempotent).
      */
     _injectFormStyles() {
-        return `
-            <style>
+        if (document.getElementById('auth-form-styles')) return;
+        const styleTag = document.createElement('style');
+        styleTag.id = 'auth-form-styles';
+        styleTag.textContent = `
                 .auth-form {
                     max-width: 400px;
                     margin: 20px auto;
@@ -403,8 +422,8 @@ class FormGenerator {
                         padding: 20px;
                     }
                 }
-            </style>
         `;
+        document.head.appendChild(styleTag);
     }
 
     /**

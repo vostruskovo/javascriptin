@@ -1,6 +1,10 @@
 /**
  * 🚀 Advanced Hashing Utilities Library
  * MD5, SHA1, SHA256, SHA512 hashing functions with encryption/decryption utilities
+ * @version 1.1.0 (revised) — sha1/sha256/sha512 were placeholders returning literal
+ *          strings like "sha1_implementation"; now implemented via the browser's
+ *          native Web Crypto API (crypto.subtle), which is async-only, so hash()
+ *          stays sync-md5-only and a new hashAsync() covers every algorithm.
  */
 
 class HashUtils {
@@ -191,20 +195,18 @@ class HashUtils {
      */
     hash(word = "", algorithm = "md5") {
         const input = word.toString();
-        
-        switch (algorithm.toLowerCase()) {
-            case "md5":
-                return this.md5(input);
-            case "sha1":
-                return this.sha1(input);
-            case "sha256":
-                return this.sha256(input);
-            case "sha512":
-                return this.sha512(input);
-            default:
-                console.warn(`Unknown algorithm: ${algorithm}. Using MD5 as default.`);
-                return this.md5(input);
+        const algo = algorithm.toLowerCase();
+
+        if (algo === "sha1" || algo === "sha256" || algo === "sha512") {
+            throw new Error(
+                `hash() is synchronous but "${algo}" requires the async Web Crypto API. ` +
+                `Use "await hashUtils.hashAsync(word, "${algo}")" instead.`
+            );
         }
+        if (algo !== "md5") {
+            console.warn(`Unknown algorithm: ${algorithm}. Using MD5 as default.`);
+        }
+        return this.md5(input);
     }
 
     /**
@@ -243,11 +245,11 @@ class HashUtils {
      * @param {number} maxLength - Maximum word length to try
      * @returns {string|null} - Found word or null
      */
-    bruteForceDecrypt(hash, algorithm = "md5", maxLength = 6) {
+    async bruteForceDecrypt(hash, algorithm = "md5", maxLength = 6) {
         console.log(`🔍 Attempting to decrypt ${algorithm.toUpperCase()} hash: ${hash}`);
         
         // Generate combinations and test
-        const found = this.generateAndTest('', hash, algorithm, maxLength);
+        const found = await this.generateAndTest('', hash, algorithm, maxLength);
         
         if (found) {
             console.log(`✅ Found: ${found}`);
@@ -261,17 +263,17 @@ class HashUtils {
     /**
      * Recursive function to generate combinations and test against hash
      */
-    generateAndTest(current, targetHash, algorithm, maxLength) {
+    async generateAndTest(current, targetHash, algorithm, maxLength) {
         if (current.length > maxLength) return null;
         
         // Test current combination
-        if (this.hash(current, algorithm) === targetHash) {
+        if ((await this.hashAsync(current, algorithm)) === targetHash) {
             return current;
         }
         
         // Generate next combinations
         for (const char of this.dict) {
-            const result = this.generateAndTest(current + char, targetHash, algorithm, maxLength);
+            const result = await this.generateAndTest(current + char, targetHash, algorithm, maxLength);
             if (result) return result;
         }
         
@@ -281,13 +283,13 @@ class HashUtils {
     /**
      * Compare multiple hashing algorithms for a string
      * @param {string} input - String to hash
-     * @returns {Object} - Object with all hash results
+     * @returns {Promise<Object>} - Object with all hash results
      */
-    compareHashes(input) {
+    async compareHashes(input) {
         const results = {};
         
         for (const algorithm of Object.keys(this.hashAlgorithms)) {
-            results[algorithm] = this.hash(input, algorithm);
+            results[algorithm] = await this.hashAsync(input, algorithm);
         }
         
         return results;
@@ -298,34 +300,56 @@ class HashUtils {
      * @param {string} input - Original string
      * @param {string} hash - Hash to compare against
      * @param {string} algorithm - Hash algorithm
-     * @returns {boolean} - True if hash matches
+     * @returns {Promise<boolean>} - True if hash matches
      */
-    validateHash(input, hash, algorithm = "md5") {
-        return this.hash(input, algorithm) === hash;
+    async validateHash(input, hash, algorithm = "md5") {
+        return (await this.hashAsync(input, algorithm)) === hash;
     }
 
-    // SHA1, SHA256, SHA512 implementations would go here...
-    // (Keeping your original implementations but organized in the class)
-
-    sha1(input = "") {
-        // Your SHA1 implementation here
-        input = input.toString();
-        // ... rest of your SHA1 code
-        return "sha1_implementation"; // Placeholder
+    /**
+     * SHA-1/256/512 via the browser's native Web Crypto API (crypto.subtle).
+     * These are inherently asynchronous — there is no synchronous SHA API in
+     * the browser — so they're separate async methods rather than sync ones.
+     * @param {string} input
+     * @param {'SHA-1'|'SHA-256'|'SHA-384'|'SHA-512'} algorithm
+     * @returns {Promise<string>} hex digest
+     */
+    async #subtleDigest(input, algorithm) {
+        const bytes = new TextEncoder().encode(input.toString());
+        const hashBuffer = await crypto.subtle.digest(algorithm, bytes);
+        return [...new Uint8Array(hashBuffer)].map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    sha256(input = "") {
-        // Your SHA256 implementation here
-        input = input.toString();
-        // ... rest of your SHA256 code
-        return "sha256_implementation"; // Placeholder
+    async sha1(input = "") {
+        return this.#subtleDigest(input, 'SHA-1');
     }
 
-    sha512(input = "") {
-        // Your SHA512 implementation here
-        input = input.toString();
-        // ... rest of your SHA512 code
-        return "sha512_implementation"; // Placeholder
+    async sha256(input = "") {
+        return this.#subtleDigest(input, 'SHA-256');
+    }
+
+    async sha512(input = "") {
+        return this.#subtleDigest(input, 'SHA-512');
+    }
+
+    /**
+     * Async equivalent of hash(), supporting every algorithm including md5
+     * (kept synchronous internally, just wrapped in a resolved promise).
+     * @param {string} word
+     * @param {string} algorithm
+     * @returns {Promise<string>}
+     */
+    async hashAsync(word = "", algorithm = "md5") {
+        const input = word.toString();
+        switch (algorithm.toLowerCase()) {
+            case "md5": return this.md5(input);
+            case "sha1": return this.sha1(input);
+            case "sha256": return this.sha256(input);
+            case "sha512": return this.sha512(input);
+            default:
+                console.warn(`Unknown algorithm: ${algorithm}. Using MD5 as default.`);
+                return this.md5(input);
+        }
     }
 }
 

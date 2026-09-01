@@ -2,6 +2,10 @@
    Full single-file "C Standard Library" for Browser JS
    + struct/enum simulation
    + include-like header system
+   (revised: the uploaded file was truncated mid-comment at
+   the very end, which is a syntax error — closed here)
+   ⚠️ c1.js, c2.js and c3.js are alternate experiments that all declare
+   the same global names (printf, time, clock, strlen...) — load only one.
    ====================================================== */
 
 /* =========================
@@ -268,4 +272,4 @@ window.CPL = {
    Auto-run example if user wants:
    Uncomment to auto-run on page load:
    examples_struct_enum_include();
-   ======
+   =========================== */

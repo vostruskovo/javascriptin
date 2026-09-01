@@ -304,7 +304,12 @@ class jTxConverter {
         `;
 
         this.#attachEventListeners();
-        this.#updateStats();
+        // NOTE: was calling this.#updateStats(), a private method that was
+        // never defined anywhere in the class (real bug — this made the
+        // whole file fail to parse). Initialize the two stats displays that
+        // actually exist instead, mirroring what clearAll() does.
+        this.#updateTextareaStats('input', '');
+        this.#updateTextareaStats('output', '');
     }
 
     /**
