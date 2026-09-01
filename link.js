@@ -100,14 +100,52 @@ class SocialShareManager {
         this.injectStyles();
         this.loadAnalytics();
         this.autoDetectContent();
+        this.bindClickEvents();
+    }
+
+    /**
+     * Escape a string for safe insertion into HTML attributes/text
+     * @param {string} str - Raw string
+     * @returns {string} Escaped string
+     */
+    escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * Delegate click handling for all share buttons (replaces inline onclick,
+     * which was vulnerable to attribute-breaking/XSS when url/title/text
+     * contained quotes or HTML)
+     */
+    bindClickEvents() {
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('.social-share-btn[data-platform]');
+            if (!button) return;
+
+            event.preventDefault();
+            const platform = button.dataset.platform;
+            const content = {
+                url: button.dataset.shareUrl,
+                title: button.dataset.shareTitle,
+                text: button.dataset.shareText
+            };
+            this.share(platform, content);
+        });
     }
 
     /**
      * Inject CSS styles for social sharing buttons
      */
     injectStyles() {
+        if (document.getElementById('social-share-styles')) return;
+
         const styles = `
-            <style>
+            <style id="social-share-styles">
             .social-share-container {
                 display: flex;
                 flex-wrap: wrap;
@@ -268,6 +306,16 @@ class SocialShareManager {
                 opacity: 1;
                 visibility: visible;
             }
+
+            @keyframes slideIn {
+                from { transform: translateX(120%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(120%); opacity: 0; }
+            }
             </style>
         `;
 
@@ -299,14 +347,17 @@ class SocialShareManager {
             const shareCount = this.analytics.shares[platform] || 0;
             
             return `
-                <button class="social-share-btn share-${platform}" 
-                        onclick="socialShareManager.share('${platform}', ${JSON.stringify({url, title, text}).replace(/"/g, '&quot;')})"
-                        data-platform="${platform}">
+                <button class="social-share-btn share-${platform}"
+                        type="button"
+                        data-platform="${platform}"
+                        data-share-url="${this.escapeHtml(url)}"
+                        data-share-title="${this.escapeHtml(title)}"
+                        data-share-text="${this.escapeHtml(text)}">
                     <i class="fab fa-${platformData.icon}"></i>
-                    ${platformData.name}
+                    ${this.escapeHtml(platformData.name)}
                     ${showCounts && shareCount > 0 ? 
                         `<span class="share-count">${shareCount}</span>` : ''}
-                    <span class="social-share-tooltip">Share on ${platformData.name}</span>
+                    <span class="social-share-tooltip">Share on ${this.escapeHtml(platformData.name)}</span>
                 </button>
             `;
         }).join('');
@@ -541,11 +592,14 @@ class SocialShareManager {
      * Load analytics from storage
      */
     loadAnalytics() {
-        if (this.config.analytics) {
+        if (!this.config.analytics) return;
+        try {
             const stored = localStorage.getItem('socialShareAnalytics');
             if (stored) {
                 this.analytics = { ...this.analytics, ...JSON.parse(stored) };
             }
+        } catch (error) {
+            console.warn('Could not load share analytics:', error);
         }
     }
 
@@ -553,8 +607,11 @@ class SocialShareManager {
      * Save analytics to storage
      */
     saveAnalytics() {
-        if (this.config.analytics) {
+        if (!this.config.analytics) return;
+        try {
             localStorage.setItem('socialShareAnalytics', JSON.stringify(this.analytics));
+        } catch (error) {
+            console.warn('Could not save share analytics:', error);
         }
     }
 
@@ -596,9 +653,14 @@ window.socialShareManager = new SocialShareManager();
  */
 function report() {
     console.warn('report() is deprecated. Use socialShareManager.generateShareButtons() instead.');
-    
+
     const buttonsHTML = window.socialShareManager.generateShareButtons();
-    document.write(`<div class="middle">${buttonsHTML}</div>`);
+    if (document.readyState === 'loading') {
+        document.write(`<div class="middle">${buttonsHTML}</div>`);
+    } else {
+        // document.write() after load would erase the page, so append instead
+        document.body.insertAdjacentHTML('beforeend', `<div class="middle">${buttonsHTML}</div>`);
+    }
 }
 
 /**
@@ -607,9 +669,7 @@ function report() {
  */
 function links() {
     console.warn('links() is deprecated. Use socialShareManager.generateShareButtons() instead.');
-    
-    const buttonsHTML = window.socialShareManager.generateShareButtons();
-    document.write(`<div class="middle">${buttonsHTML}</div>`);
+    report();
 }
 
 /**
