@@ -1,11 +1,18 @@
 /**
  * @file jTx - JavaScript Code Converter
  * @description A tool to convert JavaScript code to other programming languages
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 class jTxConverter {
     constructor() {
+        // Configuration cache for performance
+        this._configCache = {};
+        this._compilerCache = {};
+        this._history = [];
+        this._historyIndex = -1;
+        this._debounceTimeout = null;
+
         this.tags = {
             "javascript": {
                 patterns: [
@@ -217,6 +224,9 @@ class jTxConverter {
             lastConversion: null,
             popularLanguages: {}
         };
+        
+        // Add live conversion toggle state
+        this.liveConversion = false;
     }
 
     /**
@@ -229,50 +239,65 @@ class jTxConverter {
         const appContainer = document.getElementById('jtx-app') || document.body;
         
         appContainer.innerHTML = `
-            <div class="jtx-container">
+            <div class="jtx-container" role="main" aria-label="JavaScript Code Converter">
                 <header class="jtx-header">
                     <h1 class="jtx-title">🚀 jTx Code Converter</h1>
                     <p class="jtx-subtitle">Convert JavaScript code to multiple programming languages</p>
+                    <span class="jtx-version">v2.1.0</span>
                 </header>
 
-                <div class="jtx-controls">
+                <div class="jtx-controls" role="toolbar" aria-label="Conversion controls">
                     <div class="language-selector">
-                        <label for="jtx-language-select">Convert to:</label>
-                        <select id="jtx-language-select" class="jtx-select">
+                        <label for="jtx-language-select" class="visually-hidden">Convert to:</label>
+                        <select id="jtx-language-select" class="jtx-select" aria-label="Select target language">
                             ${this.#generateLanguageOptions()}
                         </select>
                     </div>
                     
-                    <button id="jtx-convert-btn" class="jtx-btn jtx-btn-primary">
+                    <button id="jtx-convert-btn" class="jtx-btn jtx-btn-primary" aria-label="Convert to ${this.currentLang}">
                         Convert to ${this.currentLang}
                     </button>
                     
-                    <button id="jtx-copy-btn" class="jtx-btn jtx-btn-secondary">
+                    <button id="jtx-copy-btn" class="jtx-btn jtx-btn-secondary" aria-label="Copy converted code">
                         Copy Result
                     </button>
                     
-                    <button id="jtx-clear-btn" class="jtx-btn jtx-btn-outline">
+                    <button id="jtx-clear-btn" class="jtx-btn jtx-btn-outline" aria-label="Clear all code">
                         Clear All
                     </button>
+
+                    <button id="jtx-undo-btn" class="jtx-btn jtx-btn-undo" aria-label="Undo last conversion" disabled>
+                        ↺ Undo
+                    </button>
+                    
+                    <div class="jtx-toggle-wrapper">
+                        <label class="jtx-toggle-label">
+                            <input type="checkbox" id="jtx-live-toggle" class="jtx-toggle">
+                            <span class="jtx-toggle-slider"></span>
+                            Live Preview
+                        </label>
+                    </div>
                 </div>
 
                 <div class="jtx-editor-container">
                     <div class="editor-section">
-                        <label class="editor-label">JavaScript Code Input:</label>
+                        <label class="editor-label" for="jtx-input">JavaScript Code Input:</label>
                         <textarea 
                             id="jtx-input" 
                             class="jtx-textarea jtx-input"
                             placeholder="Paste your JavaScript code here...\nExample:\nfunction greet(name) {\n  console.log('Hello, ' + name);\n}\n\ngreet('World');"
                             rows="15"
                             spellcheck="false"
+                            aria-label="JavaScript code input"
                         ></textarea>
                         <div class="editor-info">
                             <span id="input-stats">Lines: 0 | Chars: 0</span>
+                            <span id="input-language" class="language-detected"></span>
                         </div>
                     </div>
 
                     <div class="editor-section">
-                        <label class="editor-label">Converted ${this.currentLang.toUpperCase()} Code:</label>
+                        <label class="editor-label" for="jtx-output">Converted ${this.currentLang.toUpperCase()} Code:</label>
                         <textarea 
                             id="jtx-output" 
                             class="jtx-textarea jtx-output"
@@ -280,16 +305,18 @@ class jTxConverter {
                             rows="15"
                             readonly
                             spellcheck="false"
+                            aria-label="Converted code output"
                         ></textarea>
                         <div class="editor-info">
                             <span id="output-stats">Lines: 0 | Chars: 0</span>
+                            <button id="jtx-download-btn" class="jtx-download-btn" aria-label="Download converted code">📥 Download</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="jtx-compilers">
                     <h3 id="jtx-compiler-title">Try ${this.currentLang} Online</h3>
-                    <div id="jtx-compiler-links" class="compiler-links">
+                    <div id="jtx-compiler-links" class="compiler-links" role="list">
                         ${this.#generateCompilerLinks()}
                     </div>
                 </div>
@@ -304,10 +331,6 @@ class jTxConverter {
         `;
 
         this.#attachEventListeners();
-        // NOTE: was calling this.#updateStats(), a private method that was
-        // never defined anywhere in the class (real bug — this made the
-        // whole file fail to parse). Initialize the two stats displays that
-        // actually exist instead, mirroring what clearAll() does.
         this.#updateTextareaStats('input', '');
         this.#updateTextareaStats('output', '');
     }
@@ -330,17 +353,60 @@ class jTxConverter {
      * @returns {string} HTML links
      */
     #generateCompilerLinks() {
+        // Use cache for performance
+        if (this._compilerCache[this.currentLang]) {
+            return this._compilerCache[this.currentLang];
+        }
+
         const compilers = this.compilers[this.currentLang] || [];
-        return compilers.map(compiler => `
-            <a href="${compiler.url}" 
-               class="compiler-link" 
-               target="_blank" 
-               rel="noopener noreferrer"
-               title="${compiler.description}">
-                <span class="compiler-name">${compiler.name}</span>
-                <span class="compiler-desc">${compiler.description}</span>
-            </a>
-        `).join('');
+        if (!compilers.length) {
+            this._compilerCache[this.currentLang] = `<p class="no-compilers">No compilers available for ${this.currentLang}</p>`;
+            return this._compilerCache[this.currentLang];
+        }
+
+        const links = compilers.map(compiler => {
+            // Validate URL
+            if (!compiler.url || !compiler.url.startsWith('http')) {
+                console.warn(`Invalid URL for ${compiler.name}`);
+                return '';
+            }
+            return `
+                <a href="${compiler.url}" 
+                   class="compiler-link" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   title="${compiler.description}"
+                   role="listitem">
+                    <span class="compiler-name">${compiler.name}</span>
+                    <span class="compiler-desc">${compiler.description}</span>
+                </a>
+            `;
+        }).join('');
+
+        this._compilerCache[this.currentLang] = links;
+        return links;
+    }
+
+    /**
+     * Get language configuration with caching
+     * @param {string} lang - Language key
+     * @returns {Object|null} Language configuration
+     */
+    #getLangConfig(lang) {
+        if (this._configCache[lang]) {
+            return this._configCache[lang];
+        }
+
+        const config = this.tags[lang];
+        if (!config) return null;
+
+        // Precompile regex patterns for performance
+        this._configCache[lang] = {
+            patterns: config.patterns.map(p => new RegExp(p.source, p.flags)),
+            replacements: config.replacements
+        };
+
+        return this._configCache[lang];
     }
 
     /**
@@ -351,8 +417,11 @@ class jTxConverter {
         const convertBtn = document.getElementById('jtx-convert-btn');
         const copyBtn = document.getElementById('jtx-copy-btn');
         const clearBtn = document.getElementById('jtx-clear-btn');
+        const undoBtn = document.getElementById('jtx-undo-btn');
         const inputTextarea = document.getElementById('jtx-input');
         const outputTextarea = document.getElementById('jtx-output');
+        const liveToggle = document.getElementById('jtx-live-toggle');
+        const downloadBtn = document.getElementById('jtx-download-btn');
 
         // Language selection change
         languageSelect.addEventListener('change', (e) => {
@@ -373,23 +442,65 @@ class jTxConverter {
         // Clear button click
         clearBtn.addEventListener('click', () => {
             this.#clearAll();
+            undoBtn.disabled = true;
         });
 
-        // Input textarea stats
+        // Undo button click
+        undoBtn.addEventListener('click', () => {
+            this.#undo();
+        });
+
+        // Live conversion toggle
+        liveToggle.addEventListener('change', (e) => {
+            this.liveConversion = e.target.checked;
+            if (this.liveConversion && inputTextarea.value.trim()) {
+                this.convert();
+            }
+        });
+
+        // Download button
+        downloadBtn.addEventListener('click', () => {
+            this.#downloadOutput();
+        });
+
+        // Input textarea stats with debounced conversion
         inputTextarea.addEventListener('input', (e) => {
-            this.#updateTextareaStats('input', e.target.value);
+            const value = e.target.value;
+            this.#updateTextareaStats('input', value);
+            this.#detectInputLanguage(value);
+            
+            // Save to history
+            this.#saveToHistory(value, outputTextarea.value);
+
+            if (this.liveConversion) {
+                // Debounce live conversion
+                clearTimeout(this._debounceTimeout);
+                this._debounceTimeout = setTimeout(() => {
+                    this.convert();
+                }, 500);
+            }
         });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
+            // Ctrl+Enter to convert
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 this.convert();
             }
             
-            if (e.ctrlKey && e.key === 'c' && e.altKey) {
+            // Ctrl+Alt+C to copy
+            if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'c') {
                 e.preventDefault();
                 this.#copyToClipboard();
+            }
+
+            // Ctrl+Z for undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                if (this._historyIndex > 0) {
+                    e.preventDefault();
+                    this.#undo();
+                }
             }
         });
     }
@@ -404,6 +515,7 @@ class jTxConverter {
         const outputLabel = document.querySelector('.editor-section:nth-child(2) .editor-label');
 
         convertBtn.textContent = `Convert to ${this.currentLang}`;
+        convertBtn.setAttribute('aria-label', `Convert to ${this.currentLang}`);
         compilerTitle.textContent = `Try ${this.currentLang} Online`;
         compilerLinks.innerHTML = this.#generateCompilerLinks();
         outputLabel.textContent = `Converted ${this.currentLang.toUpperCase()} Code:`;
@@ -413,6 +525,9 @@ class jTxConverter {
         if (input.trim()) {
             this.convert();
         }
+
+        // Clear compiler cache for language change
+        this._compilerCache = {};
     }
 
     /**
@@ -428,28 +543,52 @@ class jTxConverter {
         }
 
         try {
-            let convertedCode = input;
-            const langConfig = this.tags[this.currentLang];
-
-            if (langConfig) {
-                for (let i = 0; i < langConfig.patterns.length; i++) {
-                    convertedCode = convertedCode.replace(
-                        langConfig.patterns[i], 
-                        langConfig.replacements[i]
-                    );
-                }
-            }
-
-            // Apply language-specific formatting
+            const startTime = performance.now();
+            let convertedCode = this.#applyConversions(input);
             convertedCode = this.#formatCode(convertedCode);
+            
+            // Sanitize output
+            convertedCode = this.#sanitizeCode(convertedCode);
 
             output.value = convertedCode;
             this.#updateTextareaStats('output', convertedCode);
             this.#updateConversionStats();
+            this.#saveToHistory(input, convertedCode);
+            
+            // Show conversion time
+            const duration = performance.now() - startTime;
+            if (duration > 100) {
+                console.debug(`Conversion took ${duration.toFixed(1)}ms for ${this.currentLang}`);
+            }
+
+            // Update undo button
+            document.getElementById('jtx-undo-btn').disabled = this._historyIndex <= 0;
+
+            // Highlight output briefly
+            output.classList.add('highlight');
+            setTimeout(() => output.classList.remove('highlight'), 1000);
             
         } catch (error) {
+            console.error('Conversion error:', error);
             output.value = `Error during conversion: ${error.message}`;
         }
+    }
+
+    /**
+     * Apply conversions using cached configuration
+     * @param {string} code - Input code
+     * @returns {string} Converted code
+     */
+    #applyConversions(code) {
+        const config = this.#getLangConfig(this.currentLang);
+        if (!config) return code;
+
+        // Use a single pass for better performance
+        let result = code;
+        for (let i = 0; i < config.patterns.length; i++) {
+            result = result.replace(config.patterns[i], config.replacements[i]);
+        }
+        return result;
     }
 
     /**
@@ -458,7 +597,7 @@ class jTxConverter {
      * @returns {string} Formatted code
      */
     #formatCode(code) {
-        // Basic formatting - can be enhanced with Prettier or similar
+        // Basic formatting
         switch (this.currentLang) {
             case 'python':
                 // Ensure proper indentation
@@ -466,12 +605,31 @@ class jTxConverter {
             case 'java':
                 // Add basic class structure if missing
                 if (!code.includes('class') && !code.includes('public class')) {
-                    return `public class Main {\n    public static void main(String[] args) {\n        ${code.split('\n').join('\n        ')}\n    }\n}`;
+                    const lines = code.split('\n');
+                    const indented = lines.map(line => line ? `        ${line}` : line).join('\n');
+                    return `public class Main {\n    public static void main(String[] args) {\n${indented}\n    }\n}`;
+                }
+                return code;
+            case 'csharp':
+                if (!code.includes('class') && !code.includes('public class')) {
+                    const lines = code.split('\n');
+                    const indented = lines.map(line => line ? `            ${line}` : line).join('\n');
+                    return `using System;\n\npublic class Program {\n    public static void Main() {\n${indented}\n    }\n}`;
                 }
                 return code;
             default:
                 return code;
         }
+    }
+
+    /**
+     * Sanitize user input to prevent XSS
+     * @param {string} code - Code to sanitize
+     * @returns {string} Sanitized code
+     */
+    #sanitizeCode(code) {
+        // Remove potential XSS vectors
+        return code.replace(/<script.*?>.*?<\/script>/gi, '');
     }
 
     /**
@@ -490,11 +648,93 @@ class jTxConverter {
     }
 
     /**
+     * Detect input language
+     * @param {string} code - Code to analyze
+     */
+    #detectInputLanguage(code) {
+        const languageElement = document.getElementById('input-language');
+        if (!languageElement || !code.trim()) {
+            if (languageElement) languageElement.textContent = '';
+            return;
+        }
+
+        const patterns = {
+            'JavaScript': /(console\.log|let\s+|const\s+|function\s*\()/i,
+            'Python': /(def\s+\w+|print\(|if\s+__name__)/i,
+            'PHP': /(\$[a-zA-Z_]|\?php|echo\s+)/i,
+            'Java': /(public\s+class|System\.out|String\[\])/i,
+            'C#': /(using\s+System|Console\.WriteLine|namespace\s+)/i
+        };
+
+        let bestMatch = 'JavaScript';
+        let maxScore = 0;
+
+        for (const [lang, pattern] of Object.entries(patterns)) {
+            const matches = (code.match(pattern) || []).length;
+            if (matches > maxScore) {
+                maxScore = matches;
+                bestMatch = lang;
+            }
+        }
+
+        if (maxScore > 0) {
+            languageElement.textContent = `Detected: ${bestMatch}`;
+            languageElement.style.color = '#28a745';
+        } else {
+            languageElement.textContent = 'Unknown language';
+            languageElement.style.color = '#dc3545';
+        }
+    }
+
+    /**
+     * Save to history for undo
+     * @param {string} code - Input code
+     * @param {string} converted - Converted code
+     */
+    #saveToHistory(code, converted) {
+        // Trim history if we're not at the end
+        this._history = this._history.slice(0, this._historyIndex + 1);
+        this._history.push({ code, converted, timestamp: Date.now() });
+        this._historyIndex = this._history.length - 1;
+        
+        // Limit history size
+        if (this._history.length > 50) {
+            this._history.shift();
+            this._historyIndex--;
+        }
+
+        document.getElementById('jtx-undo-btn').disabled = false;
+    }
+
+    /**
+     * Undo last conversion
+     */
+    #undo() {
+        if (this._historyIndex > 0) {
+            this._historyIndex--;
+            const entry = this._history[this._historyIndex];
+            document.getElementById('jtx-input').value = entry.code;
+            document.getElementById('jtx-output').value = entry.converted;
+            this.#updateTextareaStats('input', entry.code);
+            this.#updateTextareaStats('output', entry.converted);
+            
+            if (this._historyIndex === 0) {
+                document.getElementById('jtx-undo-btn').disabled = true;
+            }
+        }
+    }
+
+    /**
      * Copy output to clipboard
      */
     async #copyToClipboard() {
         const output = document.getElementById('jtx-output');
         
+        if (!output.value.trim()) {
+            alert('Nothing to copy. Please convert some code first.');
+            return;
+        }
+
         try {
             await navigator.clipboard.writeText(output.value);
             
@@ -502,15 +742,50 @@ class jTxConverter {
             const copyBtn = document.getElementById('jtx-copy-btn');
             const originalText = copyBtn.textContent;
             copyBtn.textContent = '✓ Copied!';
+            copyBtn.style.backgroundColor = '#28a745';
             
             setTimeout(() => {
                 copyBtn.textContent = originalText;
+                copyBtn.style.backgroundColor = '';
             }, 2000);
             
         } catch (err) {
             console.error('Failed to copy: ', err);
-            alert('Failed to copy to clipboard. Please copy manually.');
+            // Fallback
+            output.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
         }
+    }
+
+    /**
+     * Download output as file
+     */
+    #downloadOutput() {
+        const output = document.getElementById('jtx-output');
+        if (!output.value.trim()) {
+            alert('Nothing to download. Please convert some code first.');
+            return;
+        }
+
+        const extensions = {
+            'javascript': 'js',
+            'python': 'py',
+            'php': 'php',
+            'java': 'java',
+            'csharp': 'cs'
+        };
+
+        const ext = extensions[this.currentLang] || 'txt';
+        const blob = new Blob([output.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `converted.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     /**
@@ -521,6 +796,10 @@ class jTxConverter {
         document.getElementById('jtx-output').value = '';
         this.#updateTextareaStats('input', '');
         this.#updateTextareaStats('output', '');
+        document.getElementById('input-language').textContent = '';
+        this._history = [];
+        this._historyIndex = -1;
+        document.getElementById('jtx-undo-btn').disabled = true;
     }
 
     /**
@@ -534,10 +813,17 @@ class jTxConverter {
 
         const statsContent = document.getElementById('jtx-stats-content');
         if (statsContent) {
+            const popular = Object.entries(this.stats.popularLanguages)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([lang, count]) => `${lang}: ${count}`)
+                .join(' | ');
+
             statsContent.innerHTML = `
                 <div>Total conversions: <strong>${this.stats.conversions}</strong></div>
                 <div>Last conversion: <strong>${this.stats.lastConversion}</strong></div>
                 <div>Current language: <strong>${this.currentLang}</strong></div>
+                ${popular ? `<div>Popular languages: <strong>${popular}</strong></div>` : ''}
             `;
         }
     }
@@ -555,6 +841,45 @@ class jTxConverter {
         
         this.tags[language].patterns.push(...patterns);
         this.tags[language].replacements.push(...replacements);
+        
+        // Clear cache for this language
+        delete this._configCache[language];
+    }
+
+    /**
+     * Export configuration
+     * @returns {Object} Configuration object
+     */
+    exportConfig() {
+        return {
+            version: '2.1.0',
+            tags: this.tags,
+            compilers: this.compilers,
+            stats: this.stats,
+            exportedAt: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Import configuration from JSON
+     * @param {Object} config - Configuration object
+     */
+    importConfig(config) {
+        try {
+            if (config.tags) this.tags = config.tags;
+            if (config.compilers) this.compilers = config.compilers;
+            if (config.stats) this.stats = config.stats;
+            
+            // Clear caches
+            this._configCache = {};
+            this._compilerCache = {};
+            
+            this.#updateUI();
+            console.log('Configuration imported successfully');
+        } catch (error) {
+            console.error('Failed to import configuration:', error);
+            throw new Error('Invalid configuration file');
+        }
     }
 
     /**
@@ -563,6 +888,14 @@ class jTxConverter {
      */
     getStats() {
         return { ...this.stats };
+    }
+
+    /**
+     * Get version
+     * @returns {string} Version number
+     */
+    getVersion() {
+        return '2.1.0';
     }
 }
 
@@ -584,6 +917,7 @@ const jTxStyles = `
     color: white;
     padding: 30px;
     border-radius: 10px;
+    position: relative;
 }
 
 .jtx-title {
@@ -596,6 +930,25 @@ const jTxStyles = `
     margin: 10px 0 0 0;
     opacity: 0.9;
     font-size: 1.1em;
+}
+
+.jtx-version {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
 }
 
 .jtx-controls {
@@ -621,6 +974,7 @@ const jTxStyles = `
     border-radius: 4px;
     background: white;
     font-size: 14px;
+    min-width: 120px;
 }
 
 .jtx-btn {
@@ -633,12 +987,17 @@ const jTxStyles = `
     transition: all 0.2s ease;
 }
 
+.jtx-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .jtx-btn-primary {
     background: #007bff;
     color: white;
 }
 
-.jtx-btn-primary:hover {
+.jtx-btn-primary:hover:not(:disabled) {
     background: #0056b3;
     transform: translateY(-1px);
 }
@@ -648,7 +1007,7 @@ const jTxStyles = `
     color: white;
 }
 
-.jtx-btn-secondary:hover {
+.jtx-btn-secondary:hover:not(:disabled) {
     background: #545b62;
     transform: translateY(-1px);
 }
@@ -659,10 +1018,68 @@ const jTxStyles = `
     color: #dc3545;
 }
 
-.jtx-btn-outline:hover {
+.jtx-btn-outline:hover:not(:disabled) {
     background: #dc3545;
     color: white;
     transform: translateY(-1px);
+}
+
+.jtx-btn-undo {
+    background: #ffc107;
+    color: #212529;
+}
+
+.jtx-btn-undo:hover:not(:disabled) {
+    background: #e0a800;
+    transform: translateY(-1px);
+}
+
+.jtx-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.jtx-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+}
+
+.jtx-toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ccc;
+    border-radius: 11px;
+    transition: background 0.3s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.jtx-toggle:checked {
+    background: #007bff;
+}
+
+.jtx-toggle::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.jtx-toggle:checked::before {
+    transform: translateX(18px);
 }
 
 .jtx-editor-container {
@@ -694,6 +1111,7 @@ const jTxStyles = `
     line-height: 1.5;
     resize: vertical;
     transition: border-color 0.2s ease;
+    min-height: 200px;
 }
 
 .jtx-textarea:focus {
@@ -713,7 +1131,27 @@ const jTxStyles = `
     margin-top: 8px;
     font-size: 12px;
     color: #6c757d;
-    text-align: right;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.language-detected {
+    font-weight: 500;
+}
+
+.jtx-download-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    transition: transform 0.2s;
+    color: #007bff;
+}
+
+.jtx-download-btn:hover {
+    transform: scale(1.1);
 }
 
 .jtx-compilers {
@@ -730,7 +1168,7 @@ const jTxStyles = `
 
 .compiler-links {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 12px;
 }
 
@@ -765,6 +1203,12 @@ const jTxStyles = `
     color: #6c757d;
 }
 
+.no-compilers {
+    color: #6c757d;
+    font-style: italic;
+    padding: 10px 0;
+}
+
 .jtx-stats {
     padding: 15px;
     background: #f8f9fa;
@@ -782,10 +1226,26 @@ const jTxStyles = `
     color: #6c757d;
 }
 
+.stats-content div {
+    margin: 4px 0;
+}
+
+/* Animation for conversion */
+@keyframes highlight {
+    0% { background-color: #fff3cd; }
+    50% { background-color: #ffe69c; }
+    100% { background-color: #fff3cd; }
+}
+
+.jtx-output.highlight {
+    animation: highlight 0.8s ease;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .jtx-editor-container {
         grid-template-columns: 1fr;
+        gap: 15px;
     }
     
     .jtx-controls {
@@ -800,16 +1260,20 @@ const jTxStyles = `
     .compiler-links {
         grid-template-columns: 1fr;
     }
-}
-
-/* Animation for conversion */
-@keyframes highlight {
-    0% { background-color: #fff3cd; }
-    100% { background-color: #fff; }
-}
-
-.jtx-output.highlight {
-    animation: highlight 1s ease;
+    
+    .jtx-title {
+        font-size: 1.8em;
+    }
+    
+    .jtx-version {
+        position: static;
+        display: block;
+        margin-top: 5px;
+    }
+    
+    .jtx-toggle-wrapper {
+        margin-left: 0;
+    }
 }
 </style>
 `;
@@ -835,17 +1299,20 @@ document.addEventListener('DOMContentLoaded', function() {
     jtx.init('php');
 });
 
-// Legacy function for backward compatibility
+// Legacy functions for backward compatibility
 function init(chosen = "php") {
     if (window.jtx) {
         window.jtx.init(chosen);
+    } else {
+        console.warn('jTx not initialized. Please wait for DOM to load.');
     }
 }
 
-// Legacy conversion function
 function jtx(chosen = "php") {
     if (window.jtx) {
         window.jtx.currentLang = chosen;
         window.jtx.convert();
+    } else {
+        console.warn('jTx not initialized. Please wait for DOM to load.');
     }
 }

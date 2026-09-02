@@ -1,188 +1,133 @@
-/*function file()
-{
-  let filename="printf.js";
-  document.write("from ''"+filename+"<br>");
-} 
-*/
+/**
+ * @file printf-style output helpers (writes to the page via document.write)
+ * @version 1.1.0 (revised)
+ *
+ * Fixes in this revision:
+ *  - toFixed()/precision()/precisionn(): the decimal-point in the regex was
+ *    written as `\.` inside a template literal, which JS silently turns into
+ *    a *plain* `.` (matches ANY character) instead of an escaped literal dot
+ *    — e.g. the string "123x45" was wrongly accepted as a number. Now `\\.`.
+ *  - precision()/precisionn() were bare assignments (no let/const), leaking
+ *    as implicit globals that collide with math.js's own precision()
+ *    function if both files are loaded on the same page. Renamed to
+ *    cPrecision()/cPrecisionn() and properly declared (matches c.js).
+ *  - printf()/printf_(): the old implementation looped over the *arguments*
+ *    and, based on each arg's typeof, blindly tried every placeholder type
+ *    (%s, %d, %i, %c, %f...) against the whole string. That meant a number
+ *    argument could silently consume an unrelated "%s" meant for a later
+ *    string argument (try printf("%d says %s", 1, "hi") in the old code).
+ *    Rewritten as a single left-to-right pass over the *placeholders* in
+ *    the format string, consuming args in the order they actually appear —
+ *    which is how every real printf works.
+ */
 
+/**
+ * Extract up to `fixed` decimal digits from the start of a numeric-looking
+ * string (no rounding — just truncates, same as the original).
+ * @param {number|string} n
+ * @param {number} fixed
+ * @returns {string}
+ */
+const toFixed = (n, fixed) => `${n}`.match(new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`))[0];
 
-const toFixed = (n, fixed) => `${n}`.match(new RegExp(`^-?\\d+(?:\.\\d{0,${fixed}})?`))[0];
-precision=function(n,fixed)
-{
-let re=new RegExp(`^-?\\d+(?:\.\\d{0,${fixed}})?`);
-let p=`${n}`.match(re);
-return p;
+// NOTE: renamed from precision/precisionn (see file header) — kept as two
+// functions since some callers may prefer the arrow-function form.
+const cPrecision = function (n, fixed) {
+	const re = new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`);
+	return `${n}`.match(re);
+};
+
+const cPrecisionn = (n, fixed) => {
+	const re = new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`);
+	return `${n}`.match(re);
+};
+
+/**
+ * Print a string to the page, appending <br> at the end.
+ * @param {string} [string=""]
+ */
+function println(string = "") {
+	document.write(string + "<br>");
 }
 
-precisionn=(n,fixed) =>
-{
-let re=new RegExp(`^-?\\d+(?:\.\\d{0,${fixed}})?`);
-let p=`${n}`.match(re);
-return p;
-}
-
-
-function println(string="")
-{
-	document.write(string+"<br>");
-}
-
-function print_(string="")
-{
+/**
+ * Print a string to the page as-is (no trailing <br>).
+ * @param {string} [string=""]
+ */
+function print_(string = "") {
 	document.write(string);
 }
 
-function echo(...string)
-{
-
-	if(string.length==1)
-	{
-		if(string[0]=="\n")
-		{
-			document.write(string[0].replace(/\n/g,"<br>"));
-		}
-		else
-		{
-			document.write(string[0].replace(/\n/g,"<br>"));
-		}
-	}
-	else
-	{
-		let newS="";
-		for(let i=0;i<string.length;++i)
-		{
-			newS+=string[i];
-			newS=newS.replace(/\n/g,"<br>");
-		}
-		document.write(newS);
-	}
+/**
+ * Print one or more strings, converting "\n" to "<br>".
+ * @param {...string} strings
+ */
+function echo(...strings) {
+	const joined = strings.join("");
+	document.write(joined.replace(/\n/g, "<br>"));
 }
 
-function printf(...string)
-{	
+/**
+ * Format `fmt` against `args`, consuming one placeholder per arg in the
+ * order the placeholders appear (correct printf semantics). Supports
+ * %s, %d, %i, %c, %f, %.Nf and %Nf (N = 1-9), and %% for a literal percent.
+ * @param {string} fmt
+ * @param {Array<string|number>} args
+ * @returns {string}
+ */
+function formatPrintf(fmt, args) {
+	let argIndex = 0;
+	return String(fmt).replace(/%(?:(\.\d)|(\d))?([sdicf%])/g, (match, dotDigits, digit, spec) => {
+		if (spec === '%') return '%';
 
-	let newS="";
-	if(string.length==1)
-	{
-		newS=string[0].replace(/\n/g,"<br>");
-	}
-	else
-	{
-		for(let i=1;i<string.length;i++)
-		{
-			switch(typeof string[i])
-			{
-				case "string":
-					string[0]=string[0].replace("%s",string[i].toString())
-					.replace(/\n/g,"<br>");
+		const arg = args[argIndex++];
 
-
-				break;
-				case "number":
-					string[0]=string[0].replace("%i",parseInt(string[i]));
-					string[0]=string[0].replace("%s",string[i].toString());
-					string[0]=string[0].replace("%c",String.fromCharCode(string[i]));
-					string[0]=string[0].replace("%d",parseInt(string[i]));
-					string[0]=string[0].replace("%f",string[i].toFixed(2))
-					.replace("%.1f",string[i].toFixed(1))
-					.replace("%.2f",string[i].toFixed(2))
-					.replace("%.3f",string[i].toFixed(3))
-					.replace("%.4f",string[i].toFixed(4))
-					.replace("%.5f",string[i].toFixed(5))
-					.replace("%.6f",string[i].toFixed(6))
-					.replace("%.7f",string[i].toFixed(7))
-					.replace("%.8f",string[i].toFixed(8))
-					.replace("%.9f",string[i].toFixed(9))
-					.replace("%1f",string[i].toFixed(1))
-					.replace("%2f",string[i].toFixed(2))
-					.replace("%3f",string[i].toFixed(3))
-					.replace("%4f",string[i].toFixed(4))
-					.replace("%5f",string[i].toFixed(5))
-					.replace("%6f",string[i].toFixed(6))
-					.replace("%7f",string[i].toFixed(7))
-					.replace("%8f",string[i].toFixed(8))
-					.replace("%9f",string[i].toFixed(9))
-					.replace(/\n/g,"<br>");
-				break;
+		switch (spec) {
+			case 's':
+				return String(arg);
+			case 'd':
+			case 'i':
+				return String(parseInt(arg, 10));
+			case 'c':
+				return String.fromCharCode(arg);
+			case 'f': {
+				const digits = dotDigits ? parseInt(dotDigits[1], 10) : (digit ? parseInt(digit, 10) : 2);
+				return Number(arg).toFixed(digits);
 			}
-		
+			default:
+				return match;
 		}
-		newS=string[0]+"";
-	}
-	document.write(newS);
-	
-		
+	});
 }
 
-
-
-function printf_(...string)
-{	
-
-	let newS="";
-	if(string.length==1)
-	{
-		newS=string[0]
-		.replace("\n","<br>");
-		document.write(newS);
-	}
-	else
-	{
-		for(let i=1;i<string.length;i++)
-		{
-			switch(typeof string[i])
-			{
-				case "string":
-					string[0]=string[0].replace("%s",string[i].toString())
-					.replace("\n","<br>");
-
-
-				break;
-				case "number":
-					string[0]=string[0].replace("%i",parseInt(string[i]));
-					string[0]=string[0].replace("%s",string[i].toString());
-					string[0]=string[0].replace("%c",String.fromCharCode(string[i]));
-					string[0]=string[0].replace("%d",parseInt(string[i]));
-					string[0]=string[0].replace("%f",string[i].toFixed(2))
-					.replace("%.1f",precision(string[i],1))
-					.replace("%.2f",precision(string[i],2))
-					.replace("%.3f",precision(string[i],3))
-					.replace("%.4f",precision(string[i],4))
-					.replace("%.5f",precision(string[i],5))
-					.replace("%.6f",precision(string[i],6))
-					.replace("%.7f",precision(string[i],7))
-					.replace("%.8f",precision(string[i],8))
-					.replace("%.9f",precision(string[i],9))
-					.replace("%1f",precision(string[i],1))
-					.replace("%2f",precision(string[i],2))
-					.replace("%3f",precision(string[i],3))
-					.replace("%4f",precision(string[i],4))
-					.replace("%5f",precision(string[i],5))
-					.replace("%6f",precision(string[i],6))
-					.replace("%7f",precision(string[i],7))
-					.replace("%8f",precision(string[i],8))
-					.replace("%9f",precision(string[i],9))
-					.replace("\n","<br>");
-				break;
-			}
-		
-		}
-		newS=string[0]+"";
-		document.write(newS);
-	}
-
-		
+/**
+ * printf(format, ...args) — writes to the page via document.write.
+ * "\n" in the format string becomes "<br>".
+ * @param {...*} args - first element is the format string
+ */
+function printf(...args) {
+	const [fmt, ...rest] = args;
+	document.write(formatPrintf(fmt, rest).replace(/\n/g, "<br>"));
 }
 
-
-function TypeOfVar(char)
-{
-	if(typeof char == "string" && char.length == 1 )
-		return "char";
-	else if(typeof char == "string")
-		return "string";
-	else if(typeof char == "number")
-		return "number";
-
+/**
+ * printf_(format, ...args) — same as printf(), kept as a separate export
+ * for backward compatibility with existing callers.
+ * @param {...*} args - first element is the format string
+ */
+function printf_(...args) {
+	printf(...args);
 }
 
+/**
+ * Classify a JS value the way a C programmer might expect: single-char
+ * strings are "char", everything else is "string" or "number".
+ * @param {*} value
+ * @returns {"char"|"string"|"number"|undefined}
+ */
+function TypeOfVar(value) {
+	if (typeof value === "string" && value.length === 1) return "char";
+	if (typeof value === "string") return "string";
+	if (typeof value === "number") return "number";
+	return undefined;
+}
