@@ -180,6 +180,12 @@ class EncryptionAnalyzer {
                  (byte >= 91 && byte <= 96) ||
                  (byte >= 123 && byte <= 126)) {
         categories.punctuation++;
+      } else {
+        // NOTE: this branch was missing — bytes outside all three ranges above
+        // (other control chars, DEL, and every byte >= 128) fell through
+        // uncounted, so `categories.other` was always 0 no matter what was in
+        // the file, even though the verbose report displays it.
+        categories.other++;
       }
     }
 

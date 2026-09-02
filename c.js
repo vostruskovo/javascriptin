@@ -139,6 +139,9 @@ function printf_(...string) {
   }
 }
 
+// ⚠️ func.js also declares a global `TypeOfVar` with different (more elaborate)
+// behavior. Loading both files on the same page means whichever loads last wins
+// silently — keep only one of the two on a given page.
 function TypeOfVar(char) {
   if (typeof char == "string" && char.length == 1)
     return "char";

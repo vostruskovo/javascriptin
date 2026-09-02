@@ -314,12 +314,17 @@ int
 decimal
 */
 
+// ⚠️ c.js also declares a global `TypeOfVar` with different (simpler) behavior.
+// Loading both files on the same page means whichever loads last wins silently.
 function TypeOfVar(char)
 {
 	let dec = /\d\.\d/;
 	let int = /[0-9]/;
-	let c=	/[a-zA-z]/
-	let string = /[a-zA-z]/;
+	// NOTE: was /[a-zA-z]/ (capital Z, lowercase z) — as a char class this is the
+	// range 'A'-'z', which also matches [ \ ] ^ _ ` (ASCII 0x5B-0x60), not just
+	// letters. Fixed to A-Z so only actual letters match.
+	let c=	/[a-zA-Z]/
+	let string = /[a-zA-Z]/;
 
 	if(dec.test(char) == true && typeof char != "string"  )
 		return "decimal";
@@ -1464,25 +1469,28 @@ function quickSort(arr)
 
 
 /*-------------------------------------------------------------------------------------------0
-sort of Elements of a array
+sort of Elements of a array (filter-based variant)
+NOTE: previously this was a second function ALSO named `quickSort`, which
+silently overwrote the first implementation above (later `function` declarations
+win with no warning). Renamed to `quickSortFilter` so both are usable.
 */
 /*
 result...
 
 x=['b','d','a','c'];
-c=quickSort(x);
+c=quickSortFilter(x);
 
 
 ['a','b','c','d']
 */
 
-function quickSort(arr) 
+function quickSortFilter(arr) 
 {
     if (arr.length <= 1) return arr;
     const pivot = arr[arr.length - 1];
     const left = arr.filter(el => el < pivot);
     const right = arr.filter(el => el >= pivot && el !== pivot);
-    return [...quickSort(left), pivot, ...quickSort(right)];
+    return [...quickSortFilter(left), pivot, ...quickSortFilter(right)];
 }
 
 

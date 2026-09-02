@@ -69,7 +69,11 @@ function SignupWithRepeatPass()
   document.write(`<h1>${h1}</h1>`);
   document.write("<p>"+msg02+"</p>");
   document.write("<hr>");
-  CreatinInputSigun();
+  // NOTE: was `CreatinInputSigun()` — that function doesn't exist anywhere in
+  // this file (typo for the real builder below), so calling
+  // SignupWithRepeatPass() threw a ReferenceError. Fixed to call the actual
+  // field-rendering function.
+  CreatinInputSignupMenu();
   document.write("</div>");
 }
 

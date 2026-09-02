@@ -1,5 +1,9 @@
 var field=["email","password"];
 var btn_su=["sign-up","success"];
+// NOTE: was missing entirely — SantaClowsLogin() below references `inputIcon[i]`
+// but nothing ever defined it, so calling that function threw a ReferenceError.
+// Added to match `field` 1:1 (email/password).
+var inputIcon=["fa-envelope","fa-lock"];
 var glyphicon=
 [
   ["signin.php","log-in","log-in"],
@@ -30,7 +34,10 @@ function SiginWithForgetPass()
   document.write("<style>img.avatar {width: 40%;border-radius: 50%;}</style>");
   document.write("<style>.imgcontainer {text-align: center;margin: 24px 0 12px 0;}</style>");
   document.write("<style>span.psw {float: right;padding-top: 16px;}</style>");
-  document.write("<style@media screen and (max-width: 300px) {span.psw {display: block;float: none;}.cancelbtn {width: 9%;}}></style>");
+  // NOTE: was `<style@media ...>` — "style" and "@media" got mashed into one
+  // invalid tag name, so the browser never recognized this as a <style> block
+  // at all. Split into a proper <style> tag wrapping the @media rule.
+  document.write("<style>@media screen and (max-width: 300px) {span.psw {display: block;float: none;}.cancelbtn {width: 9%;}}</style>");
   document.write("<div class='imgcontainer'>");
   document.write("<img src='img_avatar2.png' alt='Avatar' class='avatar'>");
   document.write("</div>");
